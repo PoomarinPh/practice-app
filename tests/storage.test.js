@@ -79,6 +79,48 @@ describe('Storage Service & Analytics Engine', () => {
       expect(store.stats.totalWrong).toBe(1);
       expect(store.stats.averageAccuracy).toBe(60);
     });
+
+    it('records timeSeconds only for correct answers and computes averageCorrectTime', () => {
+      // First attempt: correct in 10 seconds
+      recordGuess({
+        mode: 'HSV',
+        score: 95,
+        isCorrect: true,
+        timeSeconds: 10.0,
+        breakdown: { value: 95, hue: 95, saturation: 95 },
+      });
+
+      // Second attempt: wrong in 25 seconds (should NOT be added to correct time)
+      recordGuess({
+        mode: 'HSV',
+        score: 60,
+        isCorrect: false,
+        timeSeconds: 25.0,
+        breakdown: { value: 60, hue: 60, saturation: 60 },
+      });
+
+      // Third attempt: correct in 6 seconds
+      recordGuess({
+        mode: 'HSV',
+        score: 90,
+        isCorrect: true,
+        timeSeconds: 6.0,
+        breakdown: { value: 90, hue: 90, saturation: 90 },
+      });
+
+      const store = getDataStore();
+      // Only the 2 correct guesses (10s + 6s) are averaged => 16 / 2 = 8.0s
+      expect(store.stats.averageCorrectTime).toBe(8.0);
+      expect(store.stats.modeStats.HSV.averageCorrectTime).toBe(8.0);
+
+      // Verify wrong item does not record timeSeconds in history
+      const wrongItem = store.history.find((i) => !i.isCorrect);
+      expect(wrongItem.timeSeconds).toBeUndefined();
+
+      // Check stats summary
+      const stats = getAccuracyStats(null, 'HSV');
+      expect(stats.averageCorrectTime).toBe(8.0);
+    });
   });
 
   describe('Mode Isolation', () => {

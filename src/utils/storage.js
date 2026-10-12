@@ -37,12 +37,16 @@ function createDefaultStore() {
       totalWrong: 0,
       averageAccuracy: 0,
       averageValueAccuracy: 0,
+      totalCorrectTime: 0,
+      averageCorrectTime: 0,
       modeStats: {
         HSV: {
           totalQuestions: 0,
           totalCorrect: 0,
           totalWrong: 0,
           averageAccuracy: 0,
+          totalCorrectTime: 0,
+          averageCorrectTime: 0,
         },
       },
     },
@@ -105,7 +109,7 @@ export function saveDataStore(store) {
 /**
  * Records an individual guess submission into persistent storage.
  * Updates permanent monotonic lifetime counters, applies FIFO history bounding,
- * and maintains per-mode analytics isolation.
+ * and tracks elapsed time only when isCorrect is true.
  * @param {Object} guessRecord - The guess details to record.
  * @returns {Object} The updated store.
  */
@@ -133,6 +137,12 @@ export function recordGuess(guessRecord) {
   s.totalQuestions += 1;
   if (isCorrect) {
     s.totalCorrect += 1;
+    // Track elapsed time only on correct answers
+    if (typeof guessRecord.timeSeconds === 'number') {
+      item.timeSeconds = guessRecord.timeSeconds;
+      s.totalCorrectTime = (s.totalCorrectTime || 0) + guessRecord.timeSeconds;
+      s.averageCorrectTime = Math.round((s.totalCorrectTime / s.totalCorrect) * 10) / 10;
+    }
   } else {
     s.totalWrong += 1;
   }
@@ -155,6 +165,8 @@ export function recordGuess(guessRecord) {
       totalCorrect: 0,
       totalWrong: 0,
       averageAccuracy: 0,
+      totalCorrectTime: 0,
+      averageCorrectTime: 0,
     };
   }
 
@@ -163,6 +175,10 @@ export function recordGuess(guessRecord) {
   ms.totalQuestions += 1;
   if (isCorrect) {
     ms.totalCorrect += 1;
+    if (typeof guessRecord.timeSeconds === 'number') {
+      ms.totalCorrectTime = (ms.totalCorrectTime || 0) + guessRecord.timeSeconds;
+      ms.averageCorrectTime = Math.round((ms.totalCorrectTime / ms.totalCorrect) * 10) / 10;
+    }
   } else {
     ms.totalWrong += 1;
   }
@@ -184,7 +200,7 @@ export function recordGuess(guessRecord) {
  * Reads directly from permanent counters for all-time queries to protect against FIFO pruning.
  * @param {number|null} [windowDays=null] - Days to look back, or null for all-time.
  * @param {string|null} [mode=null] - Mode to filter by (e.g., 'HSV'), or null for all.
- * @returns {{ totalGuesses: number, correct: number, wrong: number, accuracyPercent: number, averageScore: number }}
+ * @returns {{ totalGuesses: number, correct: number, wrong: number, accuracyPercent: number, averageScore: number, averageCorrectTime: number }}
  */
 export function getAccuracyStats(windowDays = null, mode = null) {
   const store = getDataStore();
@@ -199,6 +215,7 @@ export function getAccuracyStats(windowDays = null, mode = null) {
       wrong: ms.totalWrong,
       accuracyPercent: Math.round(accPct * 10) / 10,
       averageScore: ms.averageAccuracy,
+      averageCorrectTime: ms.averageCorrectTime || 0,
     };
   }
 
@@ -220,6 +237,7 @@ export function getAccuracyStats(windowDays = null, mode = null) {
       wrong: 0,
       accuracyPercent: 0,
       averageScore: 0,
+      averageCorrectTime: 0,
     };
   }
 
@@ -229,12 +247,18 @@ export function getAccuracyStats(windowDays = null, mode = null) {
   const totalScore = filtered.reduce((sum, entry) => sum + entry.score, 0);
   const averageScore = Math.round((totalScore / filtered.length) * 10) / 10;
 
+  const correctWithTime = filtered.filter((entry) => entry.isCorrect && typeof entry.timeSeconds === 'number');
+  const avgTime = correctWithTime.length > 0
+    ? Math.round((correctWithTime.reduce((sum, entry) => sum + entry.timeSeconds, 0) / correctWithTime.length) * 10) / 10
+    : 0;
+
   return {
     totalGuesses: filtered.length,
     correct,
     wrong,
     accuracyPercent,
     averageScore,
+    averageCorrectTime: avgTime,
   };
 }
 
