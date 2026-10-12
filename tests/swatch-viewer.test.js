@@ -30,6 +30,25 @@ describe('SwatchViewer Component', () => {
     expect(viewer.getViewMode()).toBe('split');
   });
 
+  it('renders Reference swatch on top and Your Match swatch on bottom', () => {
+    const viewer = new SwatchViewer(container, {
+      target: { h: 0, s: 1, v: 1, hex: '#ff0000' },
+      guess: { h: 120, s: 1, v: 1, hex: '#00ff00' },
+    });
+
+    const wrapper = container.querySelector('.swatch-viewer');
+    const cards = wrapper.querySelectorAll('.swatch-card');
+    expect(cards.length).toBe(2);
+
+    // Top card is reference
+    expect(cards[0].classList.contains('swatch-target')).toBe(true);
+    expect(cards[0].textContent).toContain('Reference');
+
+    // Bottom card is user's match
+    expect(cards[1].classList.contains('swatch-guess')).toBe(true);
+    expect(cards[1].textContent).toContain('Your Match');
+  });
+
   it('switches between split and side-by-side layout classes', () => {
     const viewer = new SwatchViewer(container, {
       target: { h: 0, s: 1, v: 1, hex: '#ff0000' },

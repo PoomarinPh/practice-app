@@ -214,39 +214,43 @@ html, body {
 
 .swatch-viewer {
   width: 100%;
-  height: 95px;
+  height: 130px;
   display: flex;
+  flex-direction: column;
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
   position: relative;
 }
 
-/* Split contact-seam view */
+/* Split contact-seam view: Reference on Top, Selected Match on Bottom */
 .swatch-viewer.mode-split {
-  flex-direction: row;
+  flex-direction: column;
 }
 
 .swatch-viewer.mode-split .swatch-card {
   flex: 1;
-  height: 100%;
+  width: 100%;
   position: relative;
   transition: background-color 0.05s linear;
 }
 
 .swatch-viewer.mode-split .swatch-target {
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  border-right: none;
 }
 
-/* Side-by-side discrete view */
+/* Separated discrete view: Top & Bottom with a physical gap */
 .swatch-viewer.mode-side-by-side {
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.55rem;
   background: transparent;
   box-shadow: none;
 }
 
 .swatch-viewer.mode-side-by-side .swatch-card {
   flex: 1;
+  width: 100%;
   border-radius: var(--radius-md);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }

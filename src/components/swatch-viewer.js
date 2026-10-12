@@ -45,7 +45,7 @@ export class SwatchViewer {
 
     this.targetEl = document.createElement('div');
     this.targetEl.className = 'swatch-card swatch-target';
-    this.targetEl.innerHTML = '<span class="swatch-label">Target</span>';
+    this.targetEl.innerHTML = '<span class="swatch-label">Reference</span>';
 
     this.guessEl = document.createElement('div');
     this.guessEl.className = 'swatch-card swatch-guess';

@@ -115,7 +115,7 @@ class ActiveGameController {
         <section class="swatch-viewer-card">
           <div class="swatch-controls-bar">
             <button id="view-mode-toggle" class="swatch-tool-btn" type="button">
-              <span>⇄</span> <span id="view-mode-text">Side-by-Side</span>
+              <span>⇅</span> <span id="view-mode-text">Separated</span>
             </button>
             <button id="grayscale-toggle" class="swatch-tool-btn" type="button">
               <span>👁</span> <span id="grayscale-text">Tonal Check</span>
@@ -284,7 +284,7 @@ class ActiveGameController {
       this.viewMode = this.viewMode === 'split' ? 'side-by-side' : 'split';
       this.swatchViewer.setViewMode(this.viewMode);
       if (viewModeText) {
-        viewModeText.textContent = this.viewMode === 'split' ? 'Side-by-Side' : 'Split View';
+        viewModeText.textContent = this.viewMode === 'split' ? 'Separated' : 'Contact Seam';
       }
       viewModeBtn.classList.toggle('active', this.viewMode === 'side-by-side');
     });
