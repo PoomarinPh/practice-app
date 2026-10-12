@@ -1,6 +1,7 @@
 /**
- * @fileoverview ChromaSense Application Entry Point.
- * Coordinates ColorWheel, SwatchViewer, live elapsed timer, and post-submission ResultModal reveal.
+ * @fileoverview ChromaSense Application Entry Point & View Coordinator.
+ * Coordinates views across Hub (Screen 1), Config (Screen 2), Game Drill (Screen 3),
+ * and History & Statistics (Screen 5) using AppRouter.
  * Strictly adheres to Google JavaScript Style Guide and DESIGN.md.
  */
 
@@ -9,7 +10,11 @@ import { ColorWheel } from './components/color-wheel.js';
 import { SwatchViewer } from './components/swatch-viewer.js';
 import { evaluateGuess, generateTargetColor } from './utils/scoring.js';
 import { getAccuracyStats, recordGuess } from './utils/storage.js';
+import { AppRouter } from './utils/router.js';
+import { ConfigView } from './views/config-view.js';
+import { HistoryView } from './views/history-view.js';
 import { ResultModal } from './views/result-modal.js';
+import { SelectorView } from './views/selector-view.js';
 
 /**
  * Formats elapsed milliseconds into MM:SS.S display.
@@ -24,168 +29,248 @@ function formatElapsed(ms) {
 }
 
 /**
- * Initializes the ChromaSense interactive interface.
+ * Active game drill session controller.
  */
-function initApp() {
-  const appContainer = document.querySelector('#app');
-  if (!appContainer) {
-    return;
+class ActiveGameController {
+  /**
+   * @param {HTMLElement} container - DOM mount container.
+   * @param {Object} config - Game configuration { exerciseId, mode, questionCount }.
+   * @param {Function} onExit - Callback when user exits the active game.
+   */
+  constructor(container, config, onExit) {
+    this.container = container;
+    this.config = config || {};
+    this.onExit = onExit;
+
+    this.currentQuestion = 1;
+    this.totalQuestions = this.config.questionCount || 5;
+    this.targetColor = generateTargetColor();
+    this.guessColor = { h: 180, s: 0.5, v: 0.8 };
+    this.viewMode = 'split';
+    this.isGrayscale = false;
+
+    this.startTime = Date.now();
+    this.timerInterval = null;
+
+    this.colorWheel = null;
+    this.swatchViewer = null;
+    this.resultModal = null;
+
+    this.render();
   }
 
-  // App Layout Skeleton
-  appContainer.innerHTML = `
-    <header class="app-header">
-      <div class="brand-badge">
-        <span class="brand-dot"></span>
-        <span class="brand-title">ChromaSense</span>
-      </div>
-      <div id="elapsed-timer" class="timer-badge">
-        ⏱ 00:00.0
-      </div>
-    </header>
-
-    <main class="interactive-container">
-      <!-- Performance & Average Speed Banner -->
-      <section class="stats-banner-card">
-        <div class="stat-pill">
-          <span class="stat-pill-label">Mode</span>
-          <span class="stat-pill-val">HSV</span>
-        </div>
-        <div class="stat-pill">
-          <span class="stat-pill-label">Accuracy</span>
-          <span id="stat-acc" class="stat-pill-val highlight-acc">--</span>
-        </div>
-        <div class="stat-pill">
-          <span class="stat-pill-label">Avg Correct Time</span>
-          <span id="stat-avg-time" class="stat-pill-val highlight-time">--</span>
-        </div>
-        <div class="stat-pill">
-          <span class="stat-pill-label">Correct / Total</span>
-          <span id="stat-ratio" class="stat-pill-val">0 / 0</span>
-        </div>
-      </section>
-
-      <!-- 1. Swatch Viewer Card -->
-      <section class="swatch-viewer-card">
-        <div class="swatch-controls-bar">
-          <button id="view-mode-toggle" class="swatch-tool-btn" type="button">
-            <span>⇄</span> <span id="view-mode-text">Side-by-Side</span>
-          </button>
-          <button id="grayscale-toggle" class="swatch-tool-btn" type="button">
-            <span>👁</span> <span id="grayscale-text">Tonal Check</span>
-          </button>
-        </div>
-        <div id="swatch-mount"></div>
-      </section>
-
-      <!-- 2. Color Wheel & Vertical Value Slider Card -->
-      <section class="controls-card">
-        <div id="wheel-mount"></div>
-
-        <!-- Micro-Adjustment Stepper Buttons -->
-        <div class="stepper-row">
-          <div class="stepper-group">
-            <span class="stepper-label">H</span>
-            <button id="h-minus" class="stepper-btn" type="button">-</button>
-            <button id="h-plus" class="stepper-btn" type="button">+</button>
-          </div>
-          <div class="stepper-group">
-            <span class="stepper-label">S</span>
-            <button id="s-minus" class="stepper-btn" type="button">-</button>
-            <button id="s-plus" class="stepper-btn" type="button">+</button>
-          </div>
-          <div class="stepper-group">
-            <span class="stepper-label">V</span>
-            <button id="v-minus" class="stepper-btn" type="button">-</button>
-            <button id="v-plus" class="stepper-btn" type="button">+</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- 3. Primary Submit Guess Button -->
-      <div class="submit-btn-row">
-        <button id="submit-guess-btn" class="submit-guess-btn" type="button">
-          Submit Guess 🎯
+  /**
+   * Renders the active game interface.
+   */
+  render() {
+    this.container.innerHTML = `
+      <header class="app-header">
+        <button id="game-exit-btn" class="game-exit-btn" type="button">
+          ← Exit
         </button>
-      </div>
-    </main>
+        <div class="brand-badge">
+          <span class="brand-dot"></span>
+          <span class="brand-title">ChromaSense</span>
+        </div>
+        <div id="elapsed-timer" class="timer-badge">
+          ⏱ 00:00.0
+        </div>
+      </header>
 
-    <div id="modal-mount"></div>
-  `;
+      <main class="interactive-container">
+        <!-- Performance & Round Banner -->
+        <section class="stats-banner-card">
+          <div class="stat-pill">
+            <span class="stat-pill-label">Progress</span>
+            <span id="stat-progress" class="stat-pill-val">Q ${this.currentQuestion} / ${this.totalQuestions}</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-label">Mode Acc</span>
+            <span id="stat-acc" class="stat-pill-val highlight-acc">--</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-label">Avg Speed</span>
+            <span id="stat-avg-time" class="stat-pill-val highlight-time">--</span>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-pill-label">Solved</span>
+            <span id="stat-ratio" class="stat-pill-val">0 / 0</span>
+          </div>
+        </section>
 
-  // Application State
-  let targetColor = generateTargetColor();
-  let guessColor = { h: 180, s: 0.5, v: 0.8 };
-  let viewMode = 'split';
-  let isGrayscale = false;
+        <!-- Swatch Viewer Card -->
+        <section class="swatch-viewer-card">
+          <div class="swatch-controls-bar">
+            <button id="view-mode-toggle" class="swatch-tool-btn" type="button">
+              <span>⇄</span> <span id="view-mode-text">Side-by-Side</span>
+            </button>
+            <button id="grayscale-toggle" class="swatch-tool-btn" type="button">
+              <span>👁</span> <span id="grayscale-text">Tonal Check</span>
+            </button>
+          </div>
+          <div id="swatch-mount"></div>
+        </section>
 
-  // Timer State
-  let startTime = Date.now();
-  let timerInterval = null;
+        <!-- Color Wheel & Vertical Value Slider Card -->
+        <section class="controls-card">
+          <div id="wheel-mount"></div>
 
-  const timerEl = document.querySelector('#elapsed-timer');
+          <!-- Micro-Adjustment Stepper Buttons -->
+          <div class="stepper-row">
+            <div class="stepper-group">
+              <span class="stepper-label">H</span>
+              <button id="h-minus" class="stepper-btn" type="button">-</button>
+              <button id="h-plus" class="stepper-btn" type="button">+</button>
+            </div>
+            <div class="stepper-group">
+              <span class="stepper-label">S</span>
+              <button id="s-minus" class="stepper-btn" type="button">-</button>
+              <button id="s-plus" class="stepper-btn" type="button">+</button>
+            </div>
+            <div class="stepper-group">
+              <span class="stepper-label">V</span>
+              <button id="v-minus" class="stepper-btn" type="button">-</button>
+              <button id="v-plus" class="stepper-btn" type="button">+</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Primary Submit Guess CTA -->
+        <div class="submit-btn-row">
+          <button id="submit-guess-btn" class="submit-guess-btn" type="button">
+            Submit Guess 🎯
+          </button>
+        </div>
+      </main>
+
+      <div id="modal-mount"></div>
+    `;
+
+    this.timerEl = this.container.querySelector('#elapsed-timer');
+
+    // Mount SwatchViewer Component
+    const swatchMount = this.container.querySelector('#swatch-mount');
+    this.swatchViewer = new SwatchViewer(swatchMount, {
+      target: this.targetColor,
+      guess: this.guessColor,
+      viewMode: this.viewMode,
+      isGrayscale: this.isGrayscale,
+    });
+
+    // Mount ColorWheel Component
+    const wheelMount = this.container.querySelector('#wheel-mount');
+    this.colorWheel = new ColorWheel(wheelMount, {
+      initialColor: this.guessColor,
+      onChange: (color) => {
+        this.guessColor = color;
+        this.swatchViewer.update({ guess: this.guessColor });
+      },
+    });
+
+    // Mount ResultModal Component
+    const modalMount = this.container.querySelector('#modal-mount');
+    this.resultModal = new ResultModal(modalMount, {
+      onNext: () => {
+        this.loadNextQuestion();
+      },
+    });
+
+    this.bindEvents();
+    this.refreshStatsBanner();
+    this.startTimer();
+  }
 
   /**
-   * Starts or restarts the live elapsed timer.
+   * Binds interaction event listeners.
    */
-  function startTimer() {
-    startTime = Date.now();
-    if (timerInterval) {
-      clearInterval(timerInterval);
-    }
-    timerInterval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      if (timerEl) {
-        timerEl.textContent = `⏱ ${formatElapsed(elapsed)}`;
+  bindEvents() {
+    // Exit button
+    const exitBtn = this.container.querySelector('#game-exit-btn');
+    exitBtn?.addEventListener('click', () => {
+      this.destroy();
+      if (typeof this.onExit === 'function') {
+        this.onExit();
       }
-    }, 100);
+    });
+
+    // Submit button
+    const submitBtn = this.container.querySelector('#submit-guess-btn');
+    submitBtn?.addEventListener('click', () => {
+      this.stopTimer();
+      const elapsedSeconds = Math.round(((Date.now() - this.startTime) / 1000) * 10) / 10;
+
+      const evaluation = evaluateGuess(this.targetColor, this.guessColor);
+
+      const guessPayload = {
+        exerciseId: this.config.exerciseId || 'color-matching',
+        mode: this.config.mode || 'HSV',
+        target: this.targetColor,
+        guess: this.guessColor,
+        score: evaluation.score,
+        breakdown: evaluation.breakdown,
+        isCorrect: evaluation.isCorrect,
+      };
+
+      if (evaluation.isCorrect) {
+        guessPayload.timeSeconds = elapsedSeconds;
+      }
+
+      recordGuess(guessPayload);
+      this.refreshStatsBanner();
+
+      const modalPayload = {
+        score: evaluation.score,
+        isCorrect: evaluation.isCorrect,
+        breakdown: evaluation.breakdown,
+        target: this.targetColor,
+        guess: this.guessColor,
+      };
+
+      if (evaluation.isCorrect) {
+        modalPayload.timeSeconds = elapsedSeconds;
+      }
+
+      this.resultModal.show(modalPayload);
+    });
+
+    // View mode toggle
+    const viewModeBtn = this.container.querySelector('#view-mode-toggle');
+    const viewModeText = this.container.querySelector('#view-mode-text');
+    viewModeBtn?.addEventListener('click', () => {
+      this.viewMode = this.viewMode === 'split' ? 'side-by-side' : 'split';
+      this.swatchViewer.setViewMode(this.viewMode);
+      if (viewModeText) {
+        viewModeText.textContent = this.viewMode === 'split' ? 'Side-by-Side' : 'Split View';
+      }
+      viewModeBtn.classList.toggle('active', this.viewMode === 'side-by-side');
+    });
+
+    // Grayscale toggle
+    const grayscaleBtn = this.container.querySelector('#grayscale-toggle');
+    grayscaleBtn?.addEventListener('click', () => {
+      this.isGrayscale = !this.isGrayscale;
+      this.swatchViewer.setGrayscale(this.isGrayscale);
+      grayscaleBtn.classList.toggle('active', this.isGrayscale);
+    });
+
+    // Steppers
+    this.container.querySelector('#h-minus')?.addEventListener('click', () => this.colorWheel.stepHue(-1));
+    this.container.querySelector('#h-plus')?.addEventListener('click', () => this.colorWheel.stepHue(1));
+    this.container.querySelector('#s-minus')?.addEventListener('click', () => this.colorWheel.stepSaturation(-0.01));
+    this.container.querySelector('#s-plus')?.addEventListener('click', () => this.colorWheel.stepSaturation(0.01));
+    this.container.querySelector('#v-minus')?.addEventListener('click', () => this.colorWheel.stepValue(-0.01));
+    this.container.querySelector('#v-plus')?.addEventListener('click', () => this.colorWheel.stepValue(0.01));
   }
 
   /**
-   * Stops the active timer.
+   * Refreshes stats pills banner.
    */
-  function stopTimer() {
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
-  }
-
-  // Mount SwatchViewer Component
-  const swatchMount = document.querySelector('#swatch-mount');
-  const swatchViewer = new SwatchViewer(swatchMount, {
-    target: targetColor,
-    guess: guessColor,
-    viewMode,
-    isGrayscale,
-  });
-
-  // Mount ColorWheel Component
-  const wheelMount = document.querySelector('#wheel-mount');
-  const colorWheel = new ColorWheel(wheelMount, {
-    initialColor: guessColor,
-    onChange: (color) => {
-      guessColor = color;
-      swatchViewer.update({ guess: guessColor });
-    },
-  });
-
-  // Mount ResultModal Component
-  const modalMount = document.querySelector('#modal-mount');
-  const resultModal = new ResultModal(modalMount, {
-    onNext: () => {
-      loadNextChallenge();
-    },
-  });
-
-  /**
-   * Refreshes the summary performance banner with current storage metrics.
-   */
-  function refreshStatsBanner() {
-    const stats = getAccuracyStats(null, 'HSV');
-    const accEl = document.querySelector('#stat-acc');
-    const timeEl = document.querySelector('#stat-avg-time');
-    const ratioEl = document.querySelector('#stat-ratio');
+  refreshStatsBanner() {
+    const stats = getAccuracyStats(null, this.config.mode || 'HSV');
+    const accEl = this.container.querySelector('#stat-acc');
+    const timeEl = this.container.querySelector('#stat-avg-time');
+    const ratioEl = this.container.querySelector('#stat-ratio');
+    const progressEl = this.container.querySelector('#stat-progress');
 
     if (accEl) {
       accEl.textContent = stats.totalGuesses > 0 ? `${stats.accuracyPercent}%` : '--';
@@ -196,98 +281,154 @@ function initApp() {
     if (ratioEl) {
       ratioEl.textContent = `${stats.correct} / ${stats.totalGuesses}`;
     }
+    if (progressEl) {
+      progressEl.textContent = `Q ${this.currentQuestion} / ${this.totalQuestions}`;
+    }
   }
 
   /**
-   * Resets and loads a new target challenge.
+   * Advances to next target color challenge.
    */
-  function loadNextChallenge() {
-    targetColor = generateTargetColor();
-    guessColor = { h: 180, s: 0.5, v: 0.8 };
-    colorWheel.setColor(guessColor);
-    swatchViewer.update({
-      target: targetColor,
-      guess: guessColor,
+  loadNextQuestion() {
+    this.currentQuestion += 1;
+    this.targetColor = generateTargetColor();
+    this.guessColor = { h: 180, s: 0.5, v: 0.8 };
+    this.colorWheel.setColor(this.guessColor);
+    this.swatchViewer.update({
+      target: this.targetColor,
+      guess: this.guessColor,
     });
-    startTimer();
+    this.refreshStatsBanner();
+    this.startTimer();
   }
 
-  // Handle Submit Guess
-  const submitBtn = document.querySelector('#submit-guess-btn');
-  submitBtn?.addEventListener('click', () => {
-    stopTimer();
-    const elapsedSeconds = Math.round(((Date.now() - startTime) / 1000) * 10) / 10;
-
-    // 1. Evaluate user guess against target color
-    const evaluation = evaluateGuess(targetColor, guessColor);
-
-    // 2. Persist to defensive local storage (record time only when isCorrect)
-    const guessPayload = {
-      exerciseId: 'color-matching',
-      mode: 'HSV',
-      target: targetColor,
-      guess: guessColor,
-      score: evaluation.score,
-      breakdown: evaluation.breakdown,
-      isCorrect: evaluation.isCorrect,
-    };
-
-    if (evaluation.isCorrect) {
-      guessPayload.timeSeconds = elapsedSeconds;
+  /**
+   * Starts live timer.
+   */
+  startTimer() {
+    this.startTime = Date.now();
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
     }
+    this.timerInterval = setInterval(() => {
+      const elapsed = Date.now() - this.startTime;
+      if (this.timerEl) {
+        this.timerEl.textContent = `⏱ ${formatElapsed(elapsed)}`;
+      }
+    }, 100);
+  }
 
-    recordGuess(guessPayload);
-
-    // 3. Update stats banner
-    refreshStatsBanner();
-
-    // 4. Reveal Result Modal Sheet (pass timeSeconds only when isCorrect)
-    const modalPayload = {
-      score: evaluation.score,
-      isCorrect: evaluation.isCorrect,
-      breakdown: evaluation.breakdown,
-      target: targetColor,
-      guess: guessColor,
-    };
-
-    if (evaluation.isCorrect) {
-      modalPayload.timeSeconds = elapsedSeconds;
+  /**
+   * Stops live timer.
+   */
+  stopTimer() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
     }
+  }
 
-    resultModal.show(modalPayload);
+  /**
+   * Tears down components and timers.
+   */
+  destroy() {
+    this.stopTimer();
+    if (this.colorWheel) {
+      this.colorWheel.destroy();
+      this.colorWheel = null;
+    }
+    this.container.innerHTML = '';
+  }
+}
+
+/**
+ * Initializes the ChromaSense application and view routing.
+ * @param {HTMLElement} [mountTarget] - Optional mount DOM element.
+ * @returns {{ router: AppRouter, destroy: Function }} App control instance.
+ */
+export function initApp(mountTarget) {
+  const appContainer = mountTarget || document.querySelector('#app');
+  if (!appContainer) {
+    return { router: null, destroy: () => {} };
+  }
+
+  let activeController = null;
+
+  /**
+   * Tears down active view controller.
+   */
+  function cleanupActiveView() {
+    if (activeController && typeof activeController.destroy === 'function') {
+      activeController.destroy();
+    }
+    activeController = null;
+    appContainer.innerHTML = '';
+  }
+
+  /**
+   * Renders the designated route.
+   * @param {string} route - Route identifier ('hub' | 'config' | 'game' | 'history').
+   * @param {Object} params - Route parameters.
+   */
+  function renderRoute(route, params) {
+    cleanupActiveView();
+
+    switch (route) {
+      case 'config':
+        activeController = new ConfigView(appContainer, {
+          exerciseId: params.exerciseId || 'color-matching',
+          onBack: () => {
+            if (!router.goBack()) {
+              router.navigate('hub');
+            }
+          },
+          onStart: (cfg) => {
+            router.navigate('game', cfg);
+          },
+        });
+        break;
+
+      case 'history':
+        activeController = new HistoryView(appContainer, {
+          onBack: () => {
+            if (!router.goBack()) {
+              router.navigate('hub');
+            }
+          },
+        });
+        break;
+
+      case 'game':
+        activeController = new ActiveGameController(appContainer, params, () => {
+          if (!router.goBack()) {
+            router.navigate('config', params);
+          }
+        });
+        break;
+
+      case 'hub':
+      default:
+        activeController = new SelectorView(appContainer, {
+          onSelectExercise: (exerciseId) => {
+            router.navigate('config', { exerciseId });
+          },
+          onOpenHistory: () => {
+            router.navigate('history');
+          },
+        });
+        break;
+    }
+  }
+
+  const router = new AppRouter({
+    initialRoute: 'hub',
+    onRouteChange: (route, params) => {
+      renderRoute(route, params);
+    },
   });
 
-  // Toggle View Mode (Split vs Side-by-Side)
-  const viewModeBtn = document.querySelector('#view-mode-toggle');
-  const viewModeText = document.querySelector('#view-mode-text');
-  viewModeBtn?.addEventListener('click', () => {
-    viewMode = viewMode === 'split' ? 'side-by-side' : 'split';
-    swatchViewer.setViewMode(viewMode);
-    if (viewModeText) {
-      viewModeText.textContent = viewMode === 'split' ? 'Side-by-Side' : 'Split View';
-    }
-    viewModeBtn.classList.toggle('active', viewMode === 'side-by-side');
-  });
-
-  // Toggle Grayscale Tonal Check
-  const grayscaleBtn = document.querySelector('#grayscale-toggle');
-  grayscaleBtn?.addEventListener('click', () => {
-    isGrayscale = !isGrayscale;
-    swatchViewer.setGrayscale(isGrayscale);
-    grayscaleBtn.classList.toggle('active', isGrayscale);
-  });
-
-  // Stepper Fine-tuning Buttons
-  document.querySelector('#h-minus')?.addEventListener('click', () => colorWheel.stepHue(-1));
-  document.querySelector('#h-plus')?.addEventListener('click', () => colorWheel.stepHue(1));
-  document.querySelector('#s-minus')?.addEventListener('click', () => colorWheel.stepSaturation(-0.01));
-  document.querySelector('#s-plus')?.addEventListener('click', () => colorWheel.stepSaturation(0.01));
-  document.querySelector('#v-minus')?.addEventListener('click', () => colorWheel.stepValue(-0.01));
-  document.querySelector('#v-plus')?.addEventListener('click', () => colorWheel.stepValue(0.01));
-
-  // Initialize Timer and Stats
-  refreshStatsBanner();
-  startTimer();
+  // Render initial route
+  renderRoute(router.getCurrentRoute(), router.getCurrentParams());
 
   // Register Service Worker in production builds
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -297,9 +438,20 @@ function initApp() {
       });
     });
   }
+
+  return {
+    router,
+    destroy: () => {
+      cleanupActiveView();
+    },
+  };
 }
 
-document.addEventListener('DOMContentLoaded', initApp);
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  initApp();
+// Auto-boot on window load in browser
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => initApp());
+  } else {
+    initApp();
+  }
 }
