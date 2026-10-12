@@ -503,8 +503,30 @@ export function initApp(mountTarget) {
   // Register Service Worker in production builds
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.error('ServiceWorker registration failed: ', err);
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New version available
+                }
+              });
+            }
+          });
+        })
+        .catch((err) => {
+          console.error('ServiceWorker registration failed: ', err);
+        });
+
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
       });
     });
   }
