@@ -73,4 +73,18 @@ describe('PWA & Mobile Packaging Audit', () => {
       expect(sw).toContain("addEventListener('fetch'");
     });
   });
+
+  describe('GitHub Pages Automated Deployment Workflow', () => {
+    it('defines a valid GitHub Actions workflow at .github/workflows/deploy.yml', () => {
+      const workflowPath = path.join(rootDir, '.github', 'workflows', 'deploy.yml');
+      expect(fs.existsSync(workflowPath)).toBe(true);
+
+      const workflow = fs.readFileSync(workflowPath, 'utf-8');
+      expect(workflow).toContain('deploy-pages');
+      expect(workflow).toContain('branches:');
+      expect(workflow).toContain('main');
+      expect(workflow).toContain('npm run build');
+    });
+  });
 });
+

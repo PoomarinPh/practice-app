@@ -503,8 +503,9 @@ export function initApp(mountTarget) {
   // Register Service Worker in production builds
   if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => {
+      const swUrl = `${import.meta.env.BASE_URL}sw.js`;
       navigator.serviceWorker
-        .register('/sw.js')
+        .register(swUrl)
         .then((reg) => {
           reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
