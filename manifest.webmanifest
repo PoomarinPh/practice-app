@@ -1,0 +1,17 @@
+{
+  "name": "ChromaSense - Color Mixer & Value Trainer",
+  "short_name": "ChromaSense",
+  "description": "Offline-capable color observation and value training application for artists and designers.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0e12",
+  "theme_color": "#0d0e12",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
