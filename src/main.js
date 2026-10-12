@@ -1,7 +1,7 @@
 /**
  * @fileoverview ChromaSense Application Entry Point & View Coordinator.
  * Coordinates views across Hub (Screen 1), Config (Screen 2), Game Drill (Screen 3),
- * and History & Statistics (Screen 5) using AppRouter.
+ * Session Summary (Screen 4), and History & Statistics (Screen 5) using AppRouter.
  * Strictly adheres to Google JavaScript Style Guide and DESIGN.md.
  */
 
@@ -9,12 +9,13 @@ import './style.css';
 import { ColorWheel } from './components/color-wheel.js';
 import { SwatchViewer } from './components/swatch-viewer.js';
 import { evaluateGuess, generateTargetColor } from './utils/scoring.js';
-import { getAccuracyStats, recordGuess } from './utils/storage.js';
+import { getAccuracyStats, recordGuess, recordSession } from './utils/storage.js';
 import { AppRouter } from './utils/router.js';
 import { ConfigView } from './views/config-view.js';
 import { HistoryView } from './views/history-view.js';
 import { ResultModal } from './views/result-modal.js';
 import { SelectorView } from './views/selector-view.js';
+import { SummaryView } from './views/summary-view.js';
 
 /**
  * Formats elapsed milliseconds into MM:SS.S display.
@@ -35,12 +36,19 @@ class ActiveGameController {
   /**
    * @param {HTMLElement} container - DOM mount container.
    * @param {Object} config - Game configuration { exerciseId, mode, questionCount }.
-   * @param {Function} onExit - Callback when user exits the active game.
+   * @param {Object|Function} callbacks - Callbacks { onExit, onFinish } or exit function.
    */
-  constructor(container, config, onExit) {
+  constructor(container, config, callbacks) {
     this.container = container;
     this.config = config || {};
-    this.onExit = onExit;
+
+    if (typeof callbacks === 'function') {
+      this.onExit = callbacks;
+      this.onFinish = null;
+    } else {
+      this.onExit = callbacks?.onExit || null;
+      this.onFinish = callbacks?.onFinish || null;
+    }
 
     this.currentQuestion = 1;
     this.totalQuestions = this.config.questionCount || 5;
@@ -48,6 +56,11 @@ class ActiveGameController {
     this.guessColor = { h: 180, s: 0.5, v: 0.8 };
     this.viewMode = 'split';
     this.isGrayscale = false;
+
+    /**
+     * @type {Array<Object>}
+     */
+    this.sessionQuestions = [];
 
     this.startTime = Date.now();
     this.timerInterval = null;
@@ -171,7 +184,23 @@ class ActiveGameController {
     const modalMount = this.container.querySelector('#modal-mount');
     this.resultModal = new ResultModal(modalMount, {
       onNext: () => {
-        this.loadNextQuestion();
+        if (this.currentQuestion >= this.totalQuestions) {
+          const sessionPayload = {
+            exerciseId: this.config.exerciseId || 'color-matching',
+            mode: this.config.mode || 'HSV',
+            totalQuestions: this.totalQuestions,
+            questions: [...this.sessionQuestions],
+          };
+
+          recordSession(sessionPayload);
+          this.destroy();
+
+          if (typeof this.onFinish === 'function') {
+            this.onFinish(sessionPayload);
+          }
+        } else {
+          this.loadNextQuestion();
+        }
       },
     });
 
@@ -200,6 +229,7 @@ class ActiveGameController {
       const elapsedSeconds = Math.round(((Date.now() - this.startTime) / 1000) * 10) / 10;
 
       const evaluation = evaluateGuess(this.targetColor, this.guessColor);
+      const isLastQuestion = this.currentQuestion >= this.totalQuestions;
 
       const guessPayload = {
         exerciseId: this.config.exerciseId || 'color-matching',
@@ -215,7 +245,20 @@ class ActiveGameController {
         guessPayload.timeSeconds = elapsedSeconds;
       }
 
+      // Persist individual guess to storage engine
       recordGuess(guessPayload);
+
+      // Record question to session history for Session Summary
+      this.sessionQuestions.push({
+        questionNumber: this.currentQuestion,
+        target: this.targetColor,
+        guess: this.guessColor,
+        score: evaluation.score,
+        isCorrect: evaluation.isCorrect,
+        timeSeconds: evaluation.isCorrect ? elapsedSeconds : null,
+        breakdown: evaluation.breakdown,
+      });
+
       this.refreshStatsBanner();
 
       const modalPayload = {
@@ -224,6 +267,7 @@ class ActiveGameController {
         breakdown: evaluation.breakdown,
         target: this.targetColor,
         guess: this.guessColor,
+        isLastQuestion,
       };
 
       if (evaluation.isCorrect) {
@@ -367,7 +411,7 @@ export function initApp(mountTarget) {
 
   /**
    * Renders the designated route.
-   * @param {string} route - Route identifier ('hub' | 'config' | 'game' | 'history').
+   * @param {string} route - Route identifier ('hub' | 'config' | 'game' | 'summary' | 'history').
    * @param {Object} params - Route parameters.
    */
   function renderRoute(route, params) {
@@ -388,6 +432,40 @@ export function initApp(mountTarget) {
         });
         break;
 
+      case 'game':
+        activeController = new ActiveGameController(appContainer, params, {
+          onExit: () => {
+            if (!router.goBack()) {
+              router.navigate('config', params);
+            }
+          },
+          onFinish: (sessionData) => {
+            router.navigate('summary', { sessionData });
+          },
+        });
+        break;
+
+      case 'summary':
+        activeController = new SummaryView(appContainer, {
+          sessionData: params.sessionData,
+          onPlayAgain: () => {
+            router.navigate('game', {
+              exerciseId: params.sessionData?.exerciseId || 'color-matching',
+              mode: params.sessionData?.mode || 'HSV',
+              questionCount: params.sessionData?.totalQuestions || 5,
+            });
+          },
+          onConfigure: () => {
+            router.navigate('config', {
+              exerciseId: params.sessionData?.exerciseId || 'color-matching',
+            });
+          },
+          onViewHistory: () => {
+            router.navigate('history');
+          },
+        });
+        break;
+
       case 'history':
         activeController = new HistoryView(appContainer, {
           onBack: () => {
@@ -395,14 +473,6 @@ export function initApp(mountTarget) {
               router.navigate('hub');
             }
           },
-        });
-        break;
-
-      case 'game':
-        activeController = new ActiveGameController(appContainer, params, () => {
-          if (!router.goBack()) {
-            router.navigate('config', params);
-          }
         });
         break;
 

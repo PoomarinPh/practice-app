@@ -313,3 +313,16 @@ export function clearAllData() {
   const freshStore = createDefaultStore();
   saveDataStore(freshStore);
 }
+
+/**
+ * Records completion of an entire exercise session, incrementing totalSessions.
+ * @param {Object} [sessionSummary={}] - Session summary payload.
+ * @returns {Object} The updated store.
+ */
+export function recordSession(sessionSummary = {}) {
+  const store = getDataStore();
+  store.stats.totalSessions = (store.stats.totalSessions || 0) + 1;
+  saveDataStore(store);
+  return store;
+}
+

@@ -1311,3 +1311,297 @@ html, body {
   background: rgba(239, 68, 68, 0.2);
 }
 
+/* ==========================================================================
+   Screen 4: Session Summary View (.summary-view-container)
+   ========================================================================== */
+.summary-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  animation: fadeIn 0.2s ease-out;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.35rem 0.2rem;
+}
+
+.summary-header-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-full);
+}
+
+.summary-hero {
+  text-align: center;
+  padding: 0.5rem 0.5rem 0.2rem;
+}
+
+.summary-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin-bottom: 0.3rem;
+}
+
+.summary-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.summary-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+.summary-kpi-card {
+  background: var(--color-bg-card);
+  backdrop-filter: var(--backdrop-blur);
+  -webkit-backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.summary-kpi-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.summary-kpi-val {
+  font-family: var(--font-family-mono);
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.round-recap-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.round-recap-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.round-recap-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.round-recap-sub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.recap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.recap-card {
+  background: rgba(22, 24, 32, 0.75);
+  backdrop-filter: var(--backdrop-blur);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.recap-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.recap-q-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.recap-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.recap-status-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.recap-status-pill.status-correct {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.recap-status-pill.status-wrong {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.recap-score-badge {
+  font-family: var(--font-family-mono);
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.recap-time-badge {
+  font-family: var(--font-family-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0.12rem 0.45rem;
+  border-radius: var(--radius-full);
+}
+
+.recap-swatches-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.55rem;
+}
+
+.recap-swatch-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.recap-swatch-preview {
+  width: 52px;
+  height: 38px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.recap-swatch-label {
+  font-family: var(--font-family-mono);
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+}
+
+.recap-vs {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+}
+
+.recap-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.recap-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.recap-bar-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.summary-actions-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.summary-action-btn {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.summary-action-btn:active {
+  transform: scale(0.98);
+}
+
+.summary-action-btn.primary {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.summary-action-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.summary-action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.summary-action-btn.tertiary {
+  background: transparent;
+  color: #818cf8;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+}
+
+.summary-action-btn.tertiary:hover {
+  color: #a5b4fc;
+}
+
+

@@ -14,6 +14,7 @@ import {
   importDataJson,
   MAX_HISTORY_ITEMS,
   recordGuess,
+  recordSession,
   STORAGE_KEY,
 } from '../src/utils/storage.js';
 
@@ -213,4 +214,17 @@ describe('Storage Service & Analytics Engine', () => {
       expect(importDataJson(JSON.stringify({ version: 99 }))).toBe(false);
     });
   });
+
+  describe('recordSession()', () => {
+    it('increments totalSessions monotonic counter and persists data', () => {
+      expect(getDataStore().stats.totalSessions).toBe(0);
+
+      recordSession({ exerciseId: 'color-matching', mode: 'HSV', totalQuestions: 5 });
+      expect(getDataStore().stats.totalSessions).toBe(1);
+
+      recordSession({ exerciseId: 'color-matching', mode: 'HSV', totalQuestions: 5 });
+      expect(getDataStore().stats.totalSessions).toBe(2);
+    });
+  });
 });
+

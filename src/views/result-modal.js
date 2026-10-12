@@ -109,7 +109,7 @@ export class ResultModal {
         </div>
 
         <button id="result-next-btn" class="result-next-cta" type="button">
-          Next Color →
+          ${data.isLastQuestion ? 'View Summary 🏆' : (data.nextButtonText || 'Next Color →')}
         </button>
       </div>
     `;
