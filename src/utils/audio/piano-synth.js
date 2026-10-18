@@ -94,7 +94,7 @@ export class PianoSynth {
    */
   async ensureAudioRunning() {
     const ctx = this.getContext();
-    if (ctx && ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+    if (ctx && ctx.state !== 'running' && typeof ctx.resume === 'function') {
       await ctx.resume();
     }
   }
@@ -226,11 +226,14 @@ export class PianoSynth {
    * @param {number} volume - Volume multiplier (0.0 to 1.0).
    * @returns {Promise<void>}
    */
-  playSample(audioBuffer, duration, start, volume) {
+  playSample(audioBuffer, duration, startTime, volume) {
     const ctx = this.getContext();
     if (!ctx) {
       return Promise.resolve();
     }
+
+    const now = ctx.currentTime || 0;
+    const start = startTime !== null && startTime !== undefined ? Math.max(now, startTime) : now;
 
     const source = ctx.createBufferSource();
     source.buffer = audioBuffer;
@@ -283,11 +286,14 @@ export class PianoSynth {
    * @param {number} volume - Velocity volume (0.0 to 1.0).
    * @returns {Promise<void>}
    */
-  playProceduralTone(freq, duration, start, volume) {
+  playProceduralTone(freq, duration, startTime, volume) {
     const ctx = this.getContext();
     if (!ctx) {
       return Promise.resolve();
     }
+
+    const now = ctx.currentTime || 0;
+    const start = startTime !== null && startTime !== undefined ? Math.max(now, startTime) : now;
 
     const toneGain = ctx.createGain();
     toneGain.connect(this.masterGainNode || ctx.destination);
@@ -393,11 +399,15 @@ export class PianoSynth {
    * @returns {Promise<void>}
    */
   async playSequential(notes, noteDuration = 0.9, gapDuration = 0.15, volume = 0.8) {
+    if (Array.isArray(notes)) {
+      await Promise.all(notes.map((note) => this.loadSample(note)));
+    }
+
     await this.ensureAudioRunning();
     const ctx = this.getContext();
     const now = ctx ? ctx.currentTime : 0;
     const promises = [];
-    let currentStart = now;
+    let currentStart = now + 0.01;
 
     for (const note of notes) {
       promises.push(this.playTone(note, noteDuration, currentStart, volume));
@@ -409,16 +419,22 @@ export class PianoSynth {
 
   /**
    * Plays a group of notes simultaneously as a chord (harmonic).
+   * Preloads all samples first to guarantee synchronized audio start time without latency drift.
    * @param {Array<number|string>} notes - Array of note frequencies or note strings.
    * @param {number} [duration=2.0] - Duration in seconds.
    * @param {number} [volume=0.8] - Volume level.
    * @returns {Promise<void>}
    */
   async playChord(notes, duration = 2.0, volume = 0.8) {
+    if (Array.isArray(notes)) {
+      await Promise.all(notes.map((note) => this.loadSample(note)));
+    }
+
     await this.ensureAudioRunning();
     const ctx = this.getContext();
     const now = ctx ? ctx.currentTime : 0;
-    const promises = (notes || []).map((note) => this.playTone(note, duration, now, volume));
+    const start = now + 0.01;
+    const promises = (notes || []).map((note) => this.playTone(note, duration, start, volume));
     await Promise.all(promises);
   }
 

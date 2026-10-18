@@ -290,6 +290,9 @@ export class VoiceGameController {
    */
   nextQuestion() {
     if (this.currentQuestion < this.totalQuestions) {
+      if (this.synth && typeof this.synth.stopAll === 'function') {
+        this.synth.stopAll();
+      }
       this.currentQuestion++;
       this.generateQuestion();
       this.render();

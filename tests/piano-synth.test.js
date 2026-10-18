@@ -91,6 +91,21 @@ describe('PianoSynth Procedural Piano Synthesizer', () => {
     expect(mockContext.resume).toHaveBeenCalled();
   });
 
+  it('resumes audio context if interrupted on playback', async () => {
+    mockContext.state = 'interrupted';
+    await synth.playTone('A4', 0.02);
+    expect(mockContext.resume).toHaveBeenCalled();
+  });
+
+  it('clamps scheduled start time to currentTime if scheduled in the past', async () => {
+    mockContext.currentTime = 10.5;
+    await synth.loadSample('C4');
+    await synth.playTone('C4', 0.5, 5.0);
+
+    const source = mockContext.createBufferSource.mock.results[0].value;
+    expect(source.start).toHaveBeenCalledWith(10.5);
+  });
+
   it('schedules multi-harmonic oscillators for an acoustic piano tone', async () => {
     await synth.playTone(440, 0.02);
 
