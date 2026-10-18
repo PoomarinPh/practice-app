@@ -382,4 +382,37 @@ describe('VoiceGameController Active Drill', () => {
 
     expect(resingBtn.textContent).toContain('Too quiet / Noise');
   });
+
+  it('auto-completes recording early when user sings a clear note and stops, without requiring 1.6s sustain', async () => {
+    let tickCount = 0;
+    // Simulate 8 voiced frames (~320ms) then silence frames
+    mockDetector.sampleCurrentPitch = vi.fn(() => {
+      tickCount++;
+      if (tickCount <= 8) {
+        return { pitch: 261.63, isVoiced: true, clarity: 0.95 };
+      }
+      return { pitch: null, isVoiced: false, clarity: 0 };
+    });
+
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    const recordingPromise = controller.startRecording('bottom');
+
+    // 8 voiced ticks * 40ms = 320ms + 6 silence ticks * 40ms = 240ms => ~560ms
+    // Wait 650ms (well under the 1600ms total timeout)
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    await recordingPromise;
+
+    // Must have evaluated and completed early without waiting for 1.6s!
+    expect(controller.bottomResult).not.toBeNull();
+    expect(controller.isListening).toBe(false);
+  });
 });

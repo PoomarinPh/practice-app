@@ -11,7 +11,7 @@ import { centsDifference } from './notes.js';
  * Default YIN algorithm configuration options.
  */
 export const DEFAULT_YIN_OPTIONS = Object.freeze({
-  minRms: 0.005,
+  minRms: 0.002,
   threshold: 0.18,
   minFreq: 65,
   maxFreq: 2200,
@@ -264,6 +264,62 @@ export function medianFilter(values) {
 }
 
 /**
+ * Extracts the stable vocal pitch from a series of sampled pitch frames.
+ * Rejects onset attack scoops, release decay transients, low-clarity noise, and octave jumps.
+ * @param {Array<{ pitch: number, clarity: number, rms?: number }|number>} samples - Voiced samples.
+ * @returns {number} The stable vocal pitch in Hz.
+ */
+export function extractStablePitch(samples) {
+  if (!samples || samples.length === 0) {
+    return 0;
+  }
+
+  // Normalize samples into { pitch, clarity, rms } objects
+  const normalized = samples
+    .map((s) => (typeof s === 'number' ? { pitch: s, clarity: 0.8, rms: 0.05 } : s))
+    .filter((s) => s && typeof s.pitch === 'number' && s.pitch > 0 && isFinite(s.pitch));
+
+  if (normalized.length === 0) {
+    return 0;
+  }
+
+  if (normalized.length === 1) {
+    return normalized[0].pitch;
+  }
+
+  // 1. Dynamic Clarity Filtering:
+  // If high-clarity frames exist (e.g. sustained vowel), filter out noisy onset/decay frames
+  const maxClarity = Math.max(...normalized.map((s) => s.clarity || 0));
+  const clarityThreshold = maxClarity >= 0.7 ? 0.55 : Math.max(0.35, maxClarity - 0.2);
+  let candidates = normalized.filter((s) => (s.clarity || 0) >= clarityThreshold);
+
+  if (candidates.length === 0) {
+    candidates = normalized;
+  }
+
+  // 2. Reject Octave Glitches and Wild Outliers:
+  const rawPitches = candidates.map((s) => s.pitch);
+  const initialMedian = medianFilter(rawPitches);
+
+  // Keep samples within ~300 cents of initial median to discard wild octave errors
+  const bounded = candidates.filter((s) => {
+    const ratio = s.pitch / initialMedian;
+    return ratio >= 0.84 && ratio <= 1.19;
+  });
+
+  const finalPool = (bounded.length >= Math.ceil(candidates.length / 2)) ? bounded : candidates;
+
+  // 3. Focus on Core Sustain (Interquartile Range):
+  // Discard the lowest 20% and highest 20% pitches (representing onset attack scoops or release drops)
+  const sortedPitches = finalPool.map((s) => s.pitch).sort((a, b) => a - b);
+  const startIdx = Math.floor(sortedPitches.length * 0.2);
+  const endIdx = Math.max(startIdx + 1, Math.ceil(sortedPitches.length * 0.8));
+  const corePitches = sortedPitches.slice(startIdx, endIdx);
+
+  return medianFilter(corePitches);
+}
+
+/**
  * Manages microphone input streams and Web Audio AnalyserNode integration for real-time pitch detection.
  */
 export class PitchDetector {
@@ -271,9 +327,9 @@ export class PitchDetector {
    * @param {Object} [options={}]
    * @param {AudioContext} [options.audioContext] - Existing Web Audio context.
    * @param {number} [options.fftSize=2048] - AnalyserNode FFT size.
-   * @param {number} [options.minRms=0.005] - Silence gating threshold.
+   * @param {number} [options.minRms=0.002] - Silence gating threshold.
    */
-  constructor({ audioContext = null, fftSize = 2048, minRms = 0.005 } = {}) {
+  constructor({ audioContext = null, fftSize = 2048, minRms = 0.002 } = {}) {
     /** @type {AudioContext|null} */
     this.audioContext = audioContext;
     this.fftSize = fftSize;
@@ -283,6 +339,8 @@ export class PitchDetector {
     this.mediaStream = null;
     /** @type {MediaStreamAudioSourceNode|null} */
     this.sourceNode = null;
+    /** @type {GainNode|null} */
+    this.gainNode = null;
     /** @type {AnalyserNode|null} */
     this.analyserNode = null;
     /** @type {Float32Array|null} */
@@ -305,6 +363,7 @@ export class PitchDetector {
 
   /**
    * Connects an active MediaStream (e.g. from getUserMedia) to the audio pipeline.
+   * Applies an internal sensitivity gain boost before the analyser node.
    * @param {MediaStream} stream - Microphone media stream.
    */
   start(stream) {
@@ -321,7 +380,16 @@ export class PitchDetector {
     this.timeBuffer = new Float32Array(this.analyserNode.fftSize);
 
     this.sourceNode = ctx.createMediaStreamSource(stream);
-    this.sourceNode.connect(this.analyserNode);
+
+    // Boost mic sensitivity cleanly into pitch analyser (never connected to destination/speaker)
+    if (typeof ctx.createGain === 'function') {
+      this.gainNode = ctx.createGain();
+      this.gainNode.gain.setValueAtTime(2.5, ctx.currentTime || 0);
+      this.sourceNode.connect(this.gainNode);
+      this.gainNode.connect(this.analyserNode);
+    } else {
+      this.sourceNode.connect(this.analyserNode);
+    }
 
     this.isListening = true;
   }
@@ -369,6 +437,15 @@ export class PitchDetector {
         // Ignore disconnect errors
       }
       this.sourceNode = null;
+    }
+
+    if (this.gainNode) {
+      try {
+        this.gainNode.disconnect();
+      } catch {
+        // Ignore disconnect errors
+      }
+      this.gainNode = null;
     }
 
     if (this.mediaStream) {

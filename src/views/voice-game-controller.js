@@ -6,7 +6,12 @@
  */
 
 import { PianoSynth } from '../utils/audio/piano-synth.js';
-import { PitchDetector, evaluatePitchAccuracy, medianFilter } from '../utils/audio/pitch-detector.js';
+import {
+  PitchDetector,
+  evaluatePitchAccuracy,
+  medianFilter,
+  extractStablePitch,
+} from '../utils/audio/pitch-detector.js';
 import {
   INTERVAL_SEMITONES,
   INTERVAL_NAMES,
@@ -189,13 +194,34 @@ export class VoiceGameController {
       const samples = [];
       const sampleIntervalMs = 40;
       const totalDurationMs = 1600;
+      let consecutiveVoicedCount = 0;
+      let consecutiveSilenceCount = 0;
+      let hasSungSubstantialNote = false;
 
       this.recordingInterval = window.setInterval(() => {
         const result = this.detector.sampleCurrentPitch();
         if (result.isVoiced && result.pitch && result.clarity > 0.35) {
-          samples.push(result.pitch);
+          samples.push({
+            pitch: result.pitch,
+            clarity: result.clarity,
+            rms: result.rms,
+          });
+          consecutiveVoicedCount++;
+          consecutiveSilenceCount = 0;
+          if (consecutiveVoicedCount >= 7) { // ~280ms of steady vocalization
+            hasSungSubstantialNote = true;
+          }
           if (actionBtn && !actionBtn.textContent.includes('Voice detected')) {
             actionBtn.textContent = 'Listening... 🟢 Voice detected!';
+          }
+        } else {
+          consecutiveSilenceCount++;
+          // If the singer has voiced a clear note (>= 280ms) and then stopped for ~240ms (6 ticks),
+          // auto-complete early so they do not have to awkwardly hold the note for the entire 1.6s
+          if (hasSungSubstantialNote && consecutiveSilenceCount >= 6) {
+            this.stopRecordingTimer();
+            this.processPitchSamples(samples, target);
+            return;
           }
         }
       }, sampleIntervalMs);
@@ -240,7 +266,11 @@ export class VoiceGameController {
     this.isListening = false;
     this.stopRecordingTimer();
 
-    const validSamples = (samples || []).filter((f) => typeof f === 'number' && f > 0);
+    const validSamples = (samples || []).filter((s) => {
+      const p = typeof s === 'number' ? s : s?.pitch;
+      return typeof p === 'number' && p > 0;
+    });
+
     if (validSamples.length === 0) {
       const actionBtn = this.getActionButton(activeTarget);
       if (actionBtn) {
@@ -260,7 +290,7 @@ export class VoiceGameController {
       return;
     }
 
-    const detectedPitch = medianFilter(validSamples);
+    const detectedPitch = extractStablePitch(validSamples);
     const targetFreq = activeTarget === 'bottom' ? this.bottomFreq : this.topFreq;
     const targetNote = activeTarget === 'bottom' ? this.bottomNote : this.topNote;
 
@@ -497,7 +527,8 @@ export class VoiceGameController {
             Sing Both Notes (Bottom & Top)
           </h2>
           <p style="font-size: 0.9rem; color: #94a3b8; margin: 0 0 1rem;">
-            Listen to the chord, then isolate and sing both the Bottom note and Top note. Both must be in tune to pass!
+            Listen to the chord, then isolate and sing both the Bottom note and Top note.
+            Sing naturally (no need to hold for the full timer). Both must be in tune to pass!
           </p>
           <div style="display: flex; gap: 0.5rem; justify-content: center;">
             <button id="voice-replay-btn" class="swatch-tool-btn" type="button" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1.2rem;">

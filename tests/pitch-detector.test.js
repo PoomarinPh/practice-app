@@ -12,6 +12,8 @@ import {
   detectPitchYin,
   evaluatePitchAccuracy,
   medianFilter,
+  extractStablePitch,
+  DEFAULT_YIN_OPTIONS,
   PitchDetector,
 } from '../src/utils/audio/pitch-detector.js';
 
@@ -205,6 +207,59 @@ describe('medianFilter helper', () => {
   it('handles empty or single item arrays', () => {
     expect(medianFilter([])).toBe(0);
     expect(medianFilter([440])).toBe(440);
+  });
+});
+
+describe('extractStablePitch Vocal Stability Engine', () => {
+  it('has increased sensitivity with DEFAULT_YIN_OPTIONS.minRms set to 0.002', () => {
+    expect(DEFAULT_YIN_OPTIONS.minRms).toBe(0.002);
+  });
+
+  it('correctly extracts pitch from stable vocal sustain', () => {
+    const samples = [
+      { pitch: 440, clarity: 0.9, rms: 0.05 },
+      { pitch: 441, clarity: 0.92, rms: 0.06 },
+      { pitch: 440, clarity: 0.88, rms: 0.05 },
+    ];
+    expect(extractStablePitch(samples)).toBe(440);
+  });
+
+  it('filters out attack scoops and release drops to prevent wild pitch variations', () => {
+    const samples = [
+      // 1. Onset attack scoop (sliding up from 390 Hz ~200 cents flat)
+      { pitch: 390, clarity: 0.45, rms: 0.02 },
+      { pitch: 410, clarity: 0.52, rms: 0.03 },
+      // 2. Stable sustained note core (A4 ~440 Hz with high clarity)
+      { pitch: 439, clarity: 0.88, rms: 0.07 },
+      { pitch: 440, clarity: 0.94, rms: 0.08 },
+      { pitch: 441, clarity: 0.92, rms: 0.08 },
+      { pitch: 440, clarity: 0.91, rms: 0.08 },
+      { pitch: 440, clarity: 0.89, rms: 0.07 },
+      // 3. Release drop / vocal fry (dropping to 380 Hz on trailing breath)
+      { pitch: 415, clarity: 0.48, rms: 0.02 },
+      { pitch: 380, clarity: 0.40, rms: 0.01 },
+    ];
+
+    const pitch = extractStablePitch(samples);
+    // Must lock onto the stable 440 Hz core, ignoring the 390 Hz scoop and 380 Hz drop
+    expect(pitch).toBeCloseTo(440, 0);
+  });
+
+  it('discards low-clarity noise frames when high-clarity voice frames exist', () => {
+    const samples = [
+      { pitch: 120, clarity: 0.36, rms: 0.01 }, // low-clarity background room hum
+      { pitch: 261.6, clarity: 0.85, rms: 0.06 },
+      { pitch: 262.0, clarity: 0.90, rms: 0.07 },
+      { pitch: 261.8, clarity: 0.88, rms: 0.07 },
+      { pitch: 850, clarity: 0.38, rms: 0.01 }, // low-clarity transient noise
+    ];
+
+    expect(extractStablePitch(samples)).toBeCloseTo(261.8, 0);
+  });
+
+  it('gracefully handles raw number arrays and empty arrays', () => {
+    expect(extractStablePitch([])).toBe(0);
+    expect(extractStablePitch([440, 442, 440])).toBe(440);
   });
 });
 

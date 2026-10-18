@@ -112,18 +112,25 @@ To achieve authentic concert grand piano sound quality while maintaining 100% of
      - Hammer percussion transient: 15ms bandpass-filtered noise impulse.
      - Natural exponential decay envelope.
 
-### 3.2 Pitch Detection Algorithm (YIN / Normalized Autocorrelation)
-Human singing voice contains formant resonances and strong harmonics that cause naive FFT peak detectors to produce octave errors. We implement the **YIN Pitch Detection algorithm**:
+### 3.2 Pitch Detection Algorithm (YIN & Vocal Stability Engine)
+Human singing voice contains formant resonances, onset attack glides, and trailing vocal fry that cause naive peak detectors or raw medians to produce pitch variations. We implement an enhanced **YIN Pitch Detection & Vocal Stability Engine**:
 1. **Difference Function:**
    $$d_t(\tau) = \sum_{j=1}^{W} (x_j - x_{j+\tau})^2$$
 2. **Cumulative Mean Normalized Difference:**
    $$d'_t(\tau) = \begin{cases} 1 & \text{if } \tau = 0 \\ \frac{d_t(\tau)}{\frac{1}{\tau}\sum_{j=1}^{\tau} d_t(j)} & \text{otherwise} \end{cases}$$
 3. **Absolute Thresholding:**
-   Identify the first dip of $d'_t(\tau) < 0.12$.
+   Identify the first dip of $d'_t(\tau) < 0.18$.
 4. **Parabolic Interpolation:**
    Refine the discrete minimum $\tau^*$ using quadratic peak fitting to achieve sub-Hertz accuracy.
-5. **Silence & Voicing Gate:**
-   Ignore frames where $\text{RMS} < 0.015$ to avoid analyzing ambient room noise.
+5. **Microphone Sensitivity Boost & Silence Gating:**
+   - Dedicated pre-analyser `GainNode` (2.5x amplification) to compensate for raw mic input without triggering telephone/earpiece mode.
+   - Ultra-sensitive silence gate ($\text{RMS} \ge 0.002$) to pick up gentle humming and quiet singing at distance.
+6. **Vocal Stability Engine (`extractStablePitch`):**
+   - **Dynamic Clarity Filtering:** Adapts threshold based on peak clarity (filters out noisy attack transients $< 0.55$).
+   - **Octave Outlier Bounding:** Binds candidates to within 300 cents of initial median to discard octave jumps.
+   - **Interquartile Sustain Isolation:** Discards the bottom 20% and top 20% pitch extremes to completely eliminate onset "attack scoops" and release "decay drops".
+7. **Natural Early Completion (No forced 1.6s sustain):**
+   - Automatically completes when a clear note is voiced ($\ge 280\text{ ms}$) and followed by natural voice release ($\sim 240\text{ ms}$ silence), so singers never need to hold their breath for the entire timer.
 
 ---
 
