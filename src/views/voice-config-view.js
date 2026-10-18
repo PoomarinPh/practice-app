@@ -27,7 +27,7 @@ export const DEFAULT_VOICE_CONFIG = Object.freeze({
   rangeFrom: 'C3',
   rangeTo: 'C5',
   questionCount: 5,
-  playbackStyle: 'melodic',
+  playbackStyle: 'harmonic',
   enabledIntervals: Object.keys(INTERVAL_SEMITONES),
 });
 
@@ -78,7 +78,7 @@ export class VoiceConfigView {
     this.rangeFrom = saved?.rangeFrom || DEFAULT_VOICE_CONFIG.rangeFrom;
     this.rangeTo = saved?.rangeTo || DEFAULT_VOICE_CONFIG.rangeTo;
     this.questionCount = saved?.questionCount || DEFAULT_VOICE_CONFIG.questionCount;
-    this.playbackStyle = saved?.playbackStyle || DEFAULT_VOICE_CONFIG.playbackStyle;
+    this.playbackStyle = 'harmonic';
     this.enabledIntervals = Array.isArray(saved?.enabledIntervals) && saved.enabledIntervals.length > 0
       ? [...saved.enabledIntervals]
       : [...DEFAULT_VOICE_CONFIG.enabledIntervals];
@@ -244,54 +244,26 @@ export class VoiceConfigView {
           </div>
         </section>
 
-        <!-- Section 3: Questions & Playback Style -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-          <!-- Questions -->
-          <section class="card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.25rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem; color: #e2e8f0;">
-              Questions
-            </h2>
-            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-              ${QUESTION_COUNTS.map(
-                (cnt) => `
-                <button
-                  type="button"
-                  class="chip-button ${this.questionCount === cnt ? 'active' : ''}"
-                  data-count="${cnt}"
-                  style="flex: 1; min-width: 40px; padding: 0.5rem 0.2rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
-                >
-                  ${cnt}
-                </button>
-              `
-              ).join('')}
-            </div>
-          </section>
-
-          <!-- Style -->
-          <section class="card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.25rem;">
-            <h2 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem; color: #e2e8f0;">
-              Playback Style
-            </h2>
-            <div style="display: flex; gap: 0.4rem;">
+        <!-- Section 3: Questions -->
+        <section class="card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem;">
+          <h2 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem; color: #e2e8f0;">
+            Questions
+          </h2>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            ${QUESTION_COUNTS.map(
+              (cnt) => `
               <button
                 type="button"
-                class="chip-button ${this.playbackStyle === 'melodic' ? 'active' : ''}"
-                data-style="melodic"
-                style="flex: 1; padding: 0.5rem 0.2rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.5rem;"
+                class="chip-button ${this.questionCount === cnt ? 'active' : ''}"
+                data-count="${cnt}"
+                style="flex: 1; min-width: 48px; padding: 0.6rem 0.25rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
               >
-                Melodic
+                ${cnt}
               </button>
-              <button
-                type="button"
-                class="chip-button ${this.playbackStyle === 'harmonic' ? 'active' : ''}"
-                data-style="harmonic"
-                style="flex: 1; padding: 0.5rem 0.2rem; font-size: 0.8rem; font-weight: 700; border-radius: 0.5rem;"
-              >
-                Harmonic
-              </button>
-            </div>
-          </section>
-        </div>
+            `
+            ).join('')}
+          </div>
+        </section>
 
         <!-- Primary CTA -->
         <button
@@ -473,17 +445,6 @@ export class VoiceConfigView {
       });
     });
 
-    // Playback style chips
-    const styleChips = this.container.querySelectorAll('[data-style]');
-    styleChips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const style = chip.getAttribute('data-style');
-        this.playbackStyle = style;
-        styleChips.forEach((c) => c.classList.remove('active'));
-        chip.classList.add('active');
-        this.savePreferences();
-      });
-    });
 
     // Start Drill CTA
     const startBtn = this.container.querySelector('#start-exercise-btn, #start-voice-drill-btn');

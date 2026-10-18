@@ -76,25 +76,23 @@ describe('VoiceGameController Active Drill', () => {
     expect(promptHeading.textContent).toMatch(/Sing the (TOP|BOTTOM) Note/);
   });
 
-  it('triggers interval playback when Replay button is clicked', () => {
+  it('triggers harmonic interval playback when Replay button is clicked', () => {
     const controller = new VoiceGameController(
       container,
       {
         enabledIntervals: ['P5'],
-        playbackStyle: 'melodic',
       },
       {},
       { synth: mockSynth, detector: mockDetector }
     );
 
-    mockSynth.playSequential.mockClear();
+    mockSynth.playChord.mockClear();
     const replayBtn = container.querySelector('#voice-replay-btn');
     expect(replayBtn).not.toBeNull();
     replayBtn.click();
 
-    expect(mockSynth.playSequential).toHaveBeenCalledWith(
+    expect(mockSynth.playChord).toHaveBeenCalledWith(
       [controller.bottomNote, controller.topNote],
-      expect.any(Number),
       expect.any(Number)
     );
   });

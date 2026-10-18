@@ -45,7 +45,7 @@ export class VoiceGameController {
       rangeTo: 'C5',
       enabledIntervals: Object.keys(INTERVAL_SEMITONES),
       questionCount: 5,
-      playbackStyle: 'melodic',
+      playbackStyle: 'harmonic',
       ...config,
     };
 
@@ -139,14 +139,10 @@ export class VoiceGameController {
   }
 
   /**
-   * Plays the two-note interval using configured melodic or harmonic playback.
+   * Plays the two-note interval simultaneously as a harmonic chord.
    */
   playCurrentInterval() {
-    if (this.config.playbackStyle === 'harmonic') {
-      this.synth.playChord([this.bottomNote, this.topNote], 2.2);
-    } else {
-      this.synth.playSequential([this.bottomNote, this.topNote], 0.7, 0.35);
-    }
+    this.synth.playChord([this.bottomNote, this.topNote], 2.2);
   }
 
   /**

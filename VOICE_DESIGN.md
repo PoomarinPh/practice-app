@@ -173,8 +173,8 @@ stateDiagram-v2
   - Allows selecting any combination (at least 1 must remain enabled).
 - **Question Count Chips:**
   - `[ 1 ]` `[ 5 ]` `[ 10 ]` `[ 15 ]` `[ 20 ]` (Default: `5`).
-- **Playback Style Selector:**
-  - `[ Melodic (One by One) ]` (Default) vs `[ Harmonic (Chords Together) ]`.
+- **Harmonic Playback:**
+  - Plays both interval notes simultaneously as a chord for ear training isolation.
 - **Primary CTA:** Prominent **"Start Voice Drill 🎙️"** button.
 
 ### 4.3 Screen 3: Active Voice Drill (`voice-game-view.js`)
@@ -219,7 +219,7 @@ The storage schema in `src/utils/storage.js` is extended under the `voice-traini
     "preferences": {
       "rangeFrom": "C3",
       "rangeTo": "C5",
-      "playbackStyle": "melodic",
+      "playbackStyle": "harmonic",
       "enabledIntervals": ["m2", "M2", "m3", "M3", "P4", "P5", "P8"]
     },
     "intervalStats": {

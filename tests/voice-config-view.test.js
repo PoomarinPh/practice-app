@@ -25,14 +25,14 @@ describe('VoiceConfigView Component', () => {
     }
   });
 
-  it('renders with default settings (C3 to C5, 5 questions, melodic)', () => {
+  it('renders with default settings (C3 to C5, 5 questions, harmonic)', () => {
     const view = new VoiceConfigView(container);
     const config = view.getConfig();
 
     expect(config.rangeFrom).toBe('C3');
     expect(config.rangeTo).toBe('C5');
     expect(config.questionCount).toBe(5);
-    expect(config.playbackStyle).toBe('melodic');
+    expect(config.playbackStyle).toBe('harmonic');
     expect(config.enabledIntervals.length).toBe(12);
   });
 
@@ -107,13 +107,9 @@ describe('VoiceConfigView Component', () => {
     expect(chip15.classList.contains('active')).toBe(true);
   });
 
-  it('toggles playback style between melodic and harmonic', () => {
-    const view = new VoiceConfigView(container);
-    const harmonicBtn = container.querySelector('[data-style="harmonic"]');
-    expect(harmonicBtn).not.toBeNull();
-
-    harmonicBtn.click();
-    expect(view.getConfig().playbackStyle).toBe('harmonic');
+  it('uses harmonic playback by default without rendering style toggles', () => {
+    new VoiceConfigView(container);
+    expect(container.querySelector('[data-style]')).toBeNull();
   });
 
   it('dispatches onStart callback with full configuration payload when start button is clicked', () => {
@@ -131,7 +127,7 @@ describe('VoiceConfigView Component', () => {
         rangeFrom: 'C3',
         rangeTo: 'C5',
         questionCount: 5,
-        playbackStyle: 'melodic',
+        playbackStyle: 'harmonic',
         enabledIntervals: expect.arrayContaining(['P5']),
       })
     );
