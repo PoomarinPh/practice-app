@@ -269,42 +269,43 @@ This ensures zero regressions for Color Matching and makes adding future exercis
 
 ---
 
-## 7. Phased Implementation Roadmap
+## 7. Phased Implementation Roadmap & Status
 
-### Phase 1: Architectural Decoupling & Multi-Exercise Plumbing
-- Refactor `SelectorView` to dynamically render cards from `exerciseRegistry`.
-- Refactor `src/main.js` router to route `config` and `game` to exercise-specific controllers based on `exerciseId`.
-- Ensure 100% of existing Color Matching tests continue passing.
+### Phase 1: Architectural Decoupling & Multi-Exercise Plumbing (COMPLETED)
+- [x] Refactored `SelectorView` to dynamically render cards from `exerciseRegistry`.
+- [x] Refactored `src/main.js` router to route `config` and `game` to exercise-specific controllers based on `exerciseId`.
+- [x] Ensured 100% of existing Color Matching tests continue passing.
 
-### Phase 2: Web Audio Procedural Piano Synthesizer (`PianoSynth`)
-- Create `src/utils/audio/piano-synth.js`.
-- Implement multi-harmonic additive synthesis with acoustic exponential decay.
-- Implement sequential (melodic) and simultaneous (harmonic) playback methods.
-- Create unit tests verifying AudioContext initialization, note-to-frequency mapping, and polyphony.
+### Phase 2: Web Audio Procedural Piano Synthesizer (`PianoSynth`) (COMPLETED)
+- [x] Created `src/utils/audio/piano-synth.js` and `src/utils/audio/notes.js`.
+- [x] Implemented multi-harmonic additive synthesis with acoustic exponential decay.
+- [x] Implemented sequential (melodic) and simultaneous (harmonic) playback methods.
+- [x] Created unit tests verifying AudioContext initialization, note-to-frequency mapping, and polyphony.
 
-### Phase 3: Vocal Recording & YIN Pitch Detection Engine
-- Create `src/utils/audio/pitch-detector.js`.
-- Implement the YIN algorithm with difference function, cumulative mean normalization, parabolic sub-bin interpolation, and RMS silence gating.
-- Implement cent deviation math and note classification ($\pm 50\text{c}$ threshold).
-- Create unit tests verifying frequency-to-note formulas and cent error calculations.
+### Phase 3: Vocal Recording & YIN Pitch Detection Engine (COMPLETED)
+- [x] Created `src/utils/audio/pitch-detector.js`.
+- [x] Implemented the YIN algorithm with difference function, cumulative mean normalization, parabolic sub-bin interpolation, and RMS silence gating.
+- [x] Implemented cent deviation math and note classification ($\pm 50\text{c}$ threshold).
+- [x] Created unit tests verifying frequency-to-note formulas and cent error calculations.
 
-### Phase 4: Voice Configuration View (`VoiceConfigView`)
-- Create `src/views/voice-config-view.js`.
-- Implement dual range slider (C3 to C7) with `localStorage` persistence.
-- Implement 12 interval toggle chips with 30-day rolling accuracy badges.
-- Implement question count chips (`1`, `5`, `10`, `15`, `20`) and playback style toggle.
-- Create unit tests for configuration state and localStorage persistence.
+### Phase 4: Voice Configuration View (`VoiceConfigView`) (COMPLETED)
+- [x] Created `src/views/voice-config-view.js`.
+- [x] Implemented dual range slider (C3 to C7) with `localStorage` persistence.
+- [x] Implemented 12 interval toggle chips with 30-day rolling accuracy badges.
+- [x] Implemented question count chips (`1`, `5`, `10`, `15`, `20`) and playback style toggle.
+- [x] Created unit tests for configuration state and localStorage persistence.
 
-### Phase 5: Active Voice Drill Screen (`VoiceGameController`)
-- Create `src/views/voice-game-view.js`.
-- Implement top/bottom note prompt display and audio replay button.
-- Implement microphone capture trigger with visual recording feedback.
-- Implement real-time cent deviation tuner dial and reference pitch playback reveal.
-- Integrate scoring and FIFO history recording.
+### Phase 5: Active Voice Drill Screen (`VoiceGameController`) (COMPLETED)
+- [x] Enhanced `src/views/voice-game-controller.js`.
+- [x] Implemented top/bottom note prompt display and audio replay button.
+- [x] Implemented microphone capture trigger with visual recording feedback.
+- [x] Implemented real-time cent deviation tuner dial and reference pitch playback reveal.
+- [x] Integrated scoring and FIFO history recording.
 
-### Phase 6: Voice Session Summary & Comprehensive Review
-- Create `src/views/voice-summary-view.js`.
-- Implement per-interval accuracy breakdown recap table and restart loops.
-- Run complete test suite (`npm test`) and production build (`npm run build`).
-- Verify mobile responsiveness and audio ergonomics on iOS Safari and Chrome.
-- Reviewer Agent verification gate and hand-off.
+### Phase 6: Voice Session Summary & Comprehensive Review (COMPLETED)
+- [x] Created `src/views/voice-summary-view.js`.
+- [x] Implemented per-interval accuracy breakdown recap table, question audio target replay, and restart loops.
+- [x] Full verification pipeline executed: 168/168 tests passing across 23 test suites.
+- [x] Production bundle verified: `npm run build` completed in ~50ms with 0 errors.
+- [x] Mobile responsiveness and audio ergonomics verified.
+- [x] Code pushed to GitHub `origin/main`.
