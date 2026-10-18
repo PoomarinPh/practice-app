@@ -4,15 +4,23 @@
  * and Screen 5 (History).
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initApp } from '../src/main.js';
 
 describe('App View Routing Integration', () => {
   let appEl;
 
   beforeEach(() => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(100)),
+    });
     document.body.innerHTML = '<div id="app"></div>';
     appEl = document.querySelector('#app');
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('boots initially into the Exercise Hub (Screen 1)', () => {

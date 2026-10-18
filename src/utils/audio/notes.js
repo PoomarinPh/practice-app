@@ -168,3 +168,43 @@ export function getIntervalSemitones(code) {
 export function getIntervalName(code) {
   return INTERVAL_NAMES[code] || code;
 }
+
+/**
+ * Mapping of sharp accidentals to flat accidentals matching standard soundfont sample files.
+ * @type {Readonly<Record<string, string>>}
+ */
+const SHARP_TO_FLAT = Object.freeze({
+  'C#': 'Db',
+  'D#': 'Eb',
+  'F#': 'Gb',
+  'G#': 'Ab',
+  'A#': 'Bb',
+});
+
+/**
+ * Converts a scientific pitch note name or MIDI note number to its canonical MP3 sample filename.
+ * All sharp accidentals are normalized to their flat equivalents (e.g., 'C#4' -> 'Db4.mp3').
+ * @param {string|number} noteOrMidi - Scientific pitch notation string (e.g., 'C4', 'C#4') or MIDI number.
+ * @returns {string} Canonical MP3 sample filename (e.g., 'Db4.mp3').
+ * @throws {Error} If note format is invalid.
+ */
+export function noteToSampleFilename(noteOrMidi) {
+  let noteStr = noteOrMidi;
+  if (typeof noteOrMidi === 'number') {
+    noteStr = midiToNote(noteOrMidi);
+  }
+  if (typeof noteStr !== 'string') {
+    throw new Error(`Invalid note: expected string or number, received ${typeof noteStr}`);
+  }
+
+  const trimmed = noteStr.trim();
+  const match = trimmed.match(/^([A-Ga-g][#b]?)(-?\d+)$/);
+  if (!match) {
+    throw new Error(`Invalid scientific pitch notation format: "${noteStr}"`);
+  }
+
+  let [, pitchName, octaveStr] = match;
+  pitchName = pitchName.charAt(0).toUpperCase() + pitchName.slice(1);
+  const canonicalPitch = SHARP_TO_FLAT[pitchName] || pitchName;
+  return `${canonicalPitch}${octaveStr}.mp3`;
+}

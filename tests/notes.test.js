@@ -13,6 +13,7 @@ import {
   midiToNote,
   noteToFreq,
   noteToMidi,
+  noteToSampleFilename,
 } from '../src/utils/audio/notes.js';
 
 describe('Audio Notes & Musical Theory Utilities', () => {
@@ -109,6 +110,20 @@ describe('Audio Notes & Musical Theory Utilities', () => {
       expect(getIntervalName('m3')).toBe('Minor 3rd');
       expect(getIntervalName('P8')).toBe('Perfect Octave');
       expect(getIntervalName('TT')).toBe('Tritone');
+    });
+  });
+
+  describe('noteToSampleFilename()', () => {
+    it('maps natural and sharp notes to canonical MP3 sample filenames', () => {
+      expect(noteToSampleFilename('C4')).toBe('C4.mp3');
+      expect(noteToSampleFilename('C#4')).toBe('Db4.mp3');
+      expect(noteToSampleFilename('Db4')).toBe('Db4.mp3');
+      expect(noteToSampleFilename('D#3')).toBe('Eb3.mp3');
+      expect(noteToSampleFilename('F#5')).toBe('Gb5.mp3');
+      expect(noteToSampleFilename('G#4')).toBe('Ab4.mp3');
+      expect(noteToSampleFilename('A#6')).toBe('Bb6.mp3');
+      expect(noteToSampleFilename('A0')).toBe('A0.mp3');
+      expect(noteToSampleFilename('C8')).toBe('C8.mp3');
     });
   });
 });

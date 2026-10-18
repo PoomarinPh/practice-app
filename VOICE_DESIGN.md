@@ -99,18 +99,18 @@ The exercise covers all 12 equal-temperament intervals from 1 to 12 semitones:
 +-------------------------------------------------------------------+
 ```
 
-### 3.1 Procedural Piano Tone Synthesis (`PianoSynth`)
-To maintain zero network downloads, instant responsiveness, and 100% offline PWA reliability, piano notes are procedurally synthesized using `AudioContext`:
-1. **Multi-Harmonic Additive Synthesis:**
-   - Harmonic 1 (Fundamental $f$): Amplitude $1.0$, decay $\tau_1 \approx 2.4\text{s}$.
-   - Harmonic 2 ($2f$): Amplitude $0.4$, decay $\tau_2 \approx 1.8\text{s}$.
-   - Harmonic 3 ($3f$): Amplitude $0.15$, decay $\tau_3 \approx 1.2\text{s}$.
-   - Harmonic 4 ($4f$): Amplitude $0.05$, decay $\tau_4 \approx 0.8\text{s}$.
-2. **Hammer Percussion Transient:**
-   - A $15\text{ms}$ bandpass-filtered noise impulse simulating felt hammer contact with steel wire.
-3. **Exponential Decay Envelope:**
-   - Attack: $0.005\text{s}$.
-   - Release: Smooth natural exponential decay to silence.
+### 3.1 Hybrid Acoustic Piano Synthesizer (`PianoSynth`)
+To achieve authentic concert grand piano sound quality while maintaining 100% offline PWA reliability, `PianoSynth` uses a hybrid architecture:
+1. **88-Key Acoustic Grand Piano MP3 Samples:**
+   - Real recorded acoustic grand piano samples for all 88 keys (`A0` through `C8`) located in `public/sounds/piano/`.
+   - Permissive open-source license (MusyngKite / CC-BY 3.0). Highly optimized MP3 format totaling ~1.8 MB (~20 KB per note).
+   - In-memory `AudioBuffer` caching with preloading (`preloadNotes()`) for zero-latency instant playback during drills.
+   - Cached automatically by Service Worker (`public/sw.js`) on first request for full offline availability.
+2. **Procedural Multi-Harmonic Fallback:**
+   - If sample fetching fails or when running in headless unit test environments, automatically falls back to procedural additive synthesis:
+     - Fundamental $f$ ($1.0$), Harmonic 2 ($2f$, $0.45$), Harmonic 3 ($3f$, $0.18$), Harmonic 4 ($4f$, $0.06$).
+     - Hammer percussion transient: 15ms bandpass-filtered noise impulse.
+     - Natural exponential decay envelope.
 
 ### 3.2 Pitch Detection Algorithm (YIN / Normalized Autocorrelation)
 Human singing voice contains formant resonances and strong harmonics that cause naive FFT peak detectors to produce octave errors. We implement the **YIN Pitch Detection algorithm**:

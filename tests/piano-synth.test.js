@@ -58,15 +58,26 @@ describe('PianoSynth Procedural Piano Synthesizer', () => {
         Q: { value: 1 },
         connect: vi.fn(),
       })),
+      decodeAudioData: vi.fn().mockImplementation(() => Promise.resolve({
+        duration: 2.0,
+        numberOfChannels: 2,
+        sampleRate: 44100,
+      })),
       resume: vi.fn().mockResolvedValue(),
       close: vi.fn().mockResolvedValue(),
     };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(1024)),
+    });
 
     synth = new PianoSynth({ audioContext: mockContext });
   });
 
   afterEach(() => {
     synth.close();
+    vi.restoreAllMocks();
   });
 
   it('initializes with provided audio context and master gain', () => {
@@ -111,5 +122,40 @@ describe('PianoSynth Procedural Piano Synthesizer', () => {
   it('stops all active voices immediately when stopAll() is called', () => {
     synth.playTone('C4', 2.0);
     expect(() => synth.stopAll()).not.toThrow();
+  });
+
+  describe('Acoustic MP3 Sample Loading & Playback', () => {
+    it('loads and caches MP3 audio buffer for a given note', async () => {
+      const buffer1 = await synth.loadSample('C4');
+      expect(buffer1).toBeDefined();
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+      expect(globalThis.fetch).toHaveBeenCalledWith(expect.stringContaining('C4.mp3'));
+
+      // Subsequent call should return cached buffer without fetching again
+      const buffer2 = await synth.loadSample('C4');
+      expect(buffer2).toBe(buffer1);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('preloads multiple notes in parallel', async () => {
+      await synth.preloadNotes(['C4', 'E4', 'G4']);
+      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('plays acoustic sample using AudioBufferSourceNode when sample is loaded', async () => {
+      await synth.loadSample('A4');
+      await synth.playTone('A4', 0.5);
+
+      expect(mockContext.createBufferSource).toHaveBeenCalled();
+    });
+
+    it('gracefully falls back to procedural synthesis when fetch fails', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      await synth.playTone('Db5', 0.05);
+
+      // Procedural fallback should kick in and create oscillators
+      expect(mockContext.createOscillator).toHaveBeenCalled();
+    });
   });
 });

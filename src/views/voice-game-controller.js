@@ -132,6 +132,10 @@ export class VoiceGameController {
     this.hasAnswered = false;
     this.isListening = false;
     this.lastResult = null;
+
+    if (this.synth && typeof this.synth.preloadNotes === 'function') {
+      this.synth.preloadNotes([this.bottomNote, this.topNote]);
+    }
   }
 
   /**

@@ -1,15 +1,29 @@
 /**
- * @fileoverview Web Audio Procedural Acoustic Piano Synthesizer (PianoSynth).
- * Generates rich acoustic piano tones via multi-harmonic additive synthesis,
- * hammer percussion transients, and natural exponential decay envelopes.
- * Completely offline with zero external audio assets.
+ * @fileoverview Hybrid Acoustic Grand Piano Synthesizer (PianoSynth).
+ * Plays real recorded concert grand piano MP3 samples across all 88 keys with
+ * zero-latency in-memory caching and offline Service Worker support.
+ * Seamlessly falls back to procedural multi-harmonic additive synthesis
+ * if sample fetching is unavailable or running in headless environments.
  * Strictly adheres to Google JavaScript Style Guide and VOICE_DESIGN.md.
  */
 
-import { noteToFreq } from './notes.js';
+import { noteToFreq, noteToSampleFilename } from './notes.js';
 
 /**
- * Harmonic configuration representing piano string acoustic spectrum.
+ * Base directory containing acoustic grand piano MP3 samples.
+ * Dynamically resolves Vite deployment base path (e.g. '/practice-app/sounds/piano/').
+ * @type {string}
+ */
+const DEFAULT_SAMPLE_BASE_URL = (() => {
+  const base =
+    typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL
+      ? import.meta.env.BASE_URL
+      : '/';
+  return `${base.replace(/\/$/, '')}/sounds/piano/`;
+})();
+
+/**
+ * Harmonic configuration representing piano string acoustic spectrum for procedural fallback.
  * @type {readonly { multiplier: number, relativeGain: number, decayRate: number }[]}
  */
 const PIANO_HARMONICS = Object.freeze([
@@ -24,11 +38,26 @@ export class PianoSynth {
    * @param {Object} [options={}] - Synthesizer options.
    * @param {AudioContext} [options.audioContext] - Existing or mock audio context.
    * @param {number} [options.masterVolume=0.8] - Master volume multiplier.
+   * @param {string} [options.sampleBaseUrl] - Custom base URL for MP3 samples.
    */
   constructor(options = {}) {
     this.ctx = options.audioContext || null;
     this.masterVolume = options.masterVolume !== undefined ? options.masterVolume : 0.8;
     this.masterGainNode = null;
+    this.sampleBaseUrl = options.sampleBaseUrl || DEFAULT_SAMPLE_BASE_URL;
+
+    /**
+     * In-memory cache of decoded AudioBuffers keyed by sample filename.
+     * @type {Map<string, AudioBuffer>}
+     */
+    this.sampleCache = new Map();
+
+    /**
+     * Map of active loading promises to prevent duplicate in-flight network requests.
+     * @private
+     * @type {Map<string, Promise<AudioBuffer | null>>}
+     */
+    this.loadingPromises = new Map();
 
     /**
      * Set of active oscillators and gain nodes for cleanup.
@@ -71,7 +100,74 @@ export class PianoSynth {
   }
 
   /**
-   * Synthesizes and plays a single acoustic piano tone.
+   * Fetches and decodes an acoustic piano MP3 sample into an AudioBuffer.
+   * Returns cached buffer if already loaded, or deduplicates in-flight fetches.
+   * @param {string|number} noteOrFilename - Scientific pitch name (e.g. 'C4', 'Eb5') or MIDI number.
+   * @returns {Promise<AudioBuffer | null>} Decoded AudioBuffer or null on failure.
+   */
+  async loadSample(noteOrFilename) {
+    let filename;
+    try {
+      if (typeof noteOrFilename === 'string' && noteOrFilename.endsWith('.mp3')) {
+        filename = noteOrFilename;
+      } else {
+        filename = noteToSampleFilename(noteOrFilename);
+      }
+    } catch {
+      return null;
+    }
+
+    if (this.sampleCache.has(filename)) {
+      return this.sampleCache.get(filename);
+    }
+
+    if (this.loadingPromises.has(filename)) {
+      return this.loadingPromises.get(filename);
+    }
+
+    const loadPromise = (async () => {
+      try {
+        const url = `${this.sampleBaseUrl}${filename}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          return null;
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const ctx = this.getContext();
+        if (!ctx || typeof ctx.decodeAudioData !== 'function') {
+          return null;
+        }
+
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        this.sampleCache.set(filename, audioBuffer);
+        return audioBuffer;
+      } catch {
+        return null;
+      } finally {
+        this.loadingPromises.delete(filename);
+      }
+    })();
+
+    this.loadingPromises.set(filename, loadPromise);
+    return loadPromise;
+  }
+
+  /**
+   * Preloads and decodes multiple note samples in parallel for zero-latency drill playback.
+   * @param {Array<string|number>} notes - List of notes or MIDI numbers to preload.
+   * @returns {Promise<void>}
+   */
+  async preloadNotes(notes) {
+    if (!Array.isArray(notes) || notes.length === 0) {
+      return;
+    }
+    await Promise.allSettled(notes.map((note) => this.loadSample(note)));
+  }
+
+  /**
+   * Plays a single acoustic grand piano tone. Prioritizes recorded MP3 sample playback,
+   * falling back to rich procedural synthesis if the sample is unavailable.
    * @param {number|string} freqOrNote - Frequency in Hz or note string (e.g., 'C4', 'A#4').
    * @param {number} [duration=2.0] - Tone duration in seconds.
    * @param {number|null} [startTime=null] - Scheduled start audio time (defaults to currentTime).
@@ -85,12 +181,114 @@ export class PianoSynth {
       return;
     }
 
+    const start = startTime !== null && startTime !== undefined ? startTime : ctx.currentTime;
+
+    // Check if we can play a real recorded acoustic grand piano sample
+    let sampleBuffer = null;
+    let noteName = null;
+
+    if (typeof freqOrNote === 'string') {
+      noteName = freqOrNote;
+    }
+
+    if (noteName) {
+      try {
+        const filename = noteToSampleFilename(noteName);
+        if (this.sampleCache.has(filename)) {
+          sampleBuffer = this.sampleCache.get(filename);
+        } else {
+          sampleBuffer = await this.loadSample(noteName);
+        }
+      } catch {
+        sampleBuffer = null;
+      }
+    }
+
+    if (sampleBuffer) {
+      return this.playSample(sampleBuffer, duration, start, volume);
+    }
+
+    // Fallback to rich procedural additive synthesis
     const freq = typeof freqOrNote === 'string' ? noteToFreq(freqOrNote) : freqOrNote;
     if (!freq || freq <= 0) {
       return;
     }
 
-    const start = startTime !== null && startTime !== undefined ? startTime : ctx.currentTime;
+    return this.playProceduralTone(freq, duration, start, volume);
+  }
+
+  /**
+   * Plays a decoded acoustic piano AudioBuffer with smooth gain ramping and natural decay.
+   * @private
+   * @param {AudioBuffer} audioBuffer - Decoded audio sample buffer.
+   * @param {number} duration - Playback duration in seconds.
+   * @param {number} start - Scheduled start audio time.
+   * @param {number} volume - Volume multiplier (0.0 to 1.0).
+   * @returns {Promise<void>}
+   */
+  playSample(audioBuffer, duration, start, volume) {
+    const ctx = this.getContext();
+    if (!ctx) {
+      return Promise.resolve();
+    }
+
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+
+    const voiceGain = ctx.createGain();
+    voiceGain.connect(this.masterGainNode || ctx.destination);
+
+    const effectiveVolume = Math.max(0.0001, volume);
+    voiceGain.gain.setValueAtTime(effectiveVolume, start);
+
+    // Apply smooth exponential release ramp near end of duration
+    const releaseTime = Math.min(0.08, duration * 0.2);
+    const releaseStart = Math.max(start, start + duration - releaseTime);
+    voiceGain.gain.setValueAtTime(effectiveVolume, releaseStart);
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    source.connect(voiceGain);
+    source.start(start);
+    source.stop(start + duration);
+
+    this.activeNodes.add(source);
+    this.activeNodes.add(voiceGain);
+
+    setTimeout(() => {
+      this.activeNodes.delete(source);
+      this.activeNodes.delete(voiceGain);
+      try {
+        if (typeof source.disconnect === 'function') {
+          source.disconnect();
+        }
+        if (typeof voiceGain.disconnect === 'function') {
+          voiceGain.disconnect();
+        }
+      } catch {
+        // Safe disconnect ignore
+      }
+    }, duration * 1000 + 50);
+
+    return new Promise((resolve) => {
+      setTimeout(resolve, duration * 1000);
+    });
+  }
+
+  /**
+   * Procedural acoustic piano synthesis fallback using additive oscillators and hammer noise.
+   * @private
+   * @param {number} freq - Fundamental frequency in Hz.
+   * @param {number} duration - Duration in seconds.
+   * @param {number} start - Scheduled audio time.
+   * @param {number} volume - Velocity volume (0.0 to 1.0).
+   * @returns {Promise<void>}
+   */
+  playProceduralTone(freq, duration, start, volume) {
+    const ctx = this.getContext();
+    if (!ctx) {
+      return Promise.resolve();
+    }
+
     const toneGain = ctx.createGain();
     toneGain.connect(this.masterGainNode || ctx.destination);
 
