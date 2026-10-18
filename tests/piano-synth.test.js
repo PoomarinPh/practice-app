@@ -173,4 +173,35 @@ describe('PianoSynth Procedural Piano Synthesizer', () => {
       expect(mockContext.createOscillator).toHaveBeenCalled();
     });
   });
+
+  describe('Pure Sine Wave Mode (soundType: sine)', () => {
+    it('initializes with default soundType as piano and allows changing to sine', () => {
+      expect(synth.getSoundType()).toBe('piano');
+      synth.setSoundType('sine');
+      expect(synth.getSoundType()).toBe('sine');
+    });
+
+    it('plays pure single sine oscillator at exact note frequency when soundType is sine', async () => {
+      synth.setSoundType('sine');
+      await synth.playTone('A4', 0.5);
+
+      // In sine mode, it creates exactly 1 oscillator of type 'sine' set to 440 Hz
+      expect(mockContext.createOscillator).toHaveBeenCalledTimes(1);
+      const osc = mockContext.createOscillator.mock.results[0].value;
+      expect(osc.type).toBe('sine');
+      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(440, expect.any(Number));
+    });
+
+    it('plays simultaneous sine oscillators in playChord when soundType is sine', async () => {
+      synth.setSoundType('sine');
+      await synth.playChord(['C4', 'G4'], 2.0);
+
+      // 2 notes => 2 oscillators of type sine
+      expect(mockContext.createOscillator).toHaveBeenCalledTimes(2);
+      const osc1 = mockContext.createOscillator.mock.results[0].value;
+      const osc2 = mockContext.createOscillator.mock.results[1].value;
+      expect(osc1.type).toBe('sine');
+      expect(osc2.type).toBe('sine');
+    });
+  });
 });

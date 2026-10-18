@@ -62,6 +62,9 @@ export class VoiceGameController {
     }
 
     this.synth = dependencies.synth || new PianoSynth();
+    if (this.synth && typeof this.synth.setSoundType === 'function') {
+      this.synth.setSoundType(this.config.soundType || 'piano');
+    }
     this.detector = dependencies.detector || new PitchDetector();
 
     this.currentQuestion = 1;
@@ -72,6 +75,8 @@ export class VoiceGameController {
     this.timerInterval = null;
     this.recordingInterval = null;
     this.recordingTimeout = null;
+    this.refTimeout = null;
+    this.isPlayingReference = null;
 
     this.activeInterval = 'P5';
     this.bottomNote = 'C4';
@@ -151,11 +156,60 @@ export class VoiceGameController {
 
   /**
    * Plays isolated reference pitch for specified target note ('bottom' or 'top').
+   * If already playing this reference pitch, toggles it off.
    * @param {'bottom'|'top'} target - Which note to play.
    */
   playTargetPitch(target) {
     const note = target === 'bottom' ? this.bottomNote : this.topNote;
-    this.synth.playTone(note, 1.8);
+    const refBtn = this.container.querySelector(`#voice-ref-${target}-btn`);
+
+    if (this.isPlayingReference === target) {
+      if (this.synth && typeof this.synth.stopAll === 'function') {
+        this.synth.stopAll();
+      }
+      if (this.refTimeout) {
+        clearTimeout(this.refTimeout);
+        this.refTimeout = null;
+      }
+      this.isPlayingReference = null;
+      if (refBtn) {
+        refBtn.innerHTML = '<span>🎵</span> Hear Reference';
+      }
+      return;
+    }
+
+    if (this.isPlayingReference) {
+      const prevRefBtn = this.container.querySelector(`#voice-ref-${this.isPlayingReference}-btn`);
+      if (prevRefBtn) {
+        prevRefBtn.innerHTML = '<span>🎵</span> Hear Reference';
+      }
+    }
+
+    if (this.synth && typeof this.synth.stopAll === 'function') {
+      this.synth.stopAll();
+    }
+    if (this.refTimeout) {
+      clearTimeout(this.refTimeout);
+      this.refTimeout = null;
+    }
+
+    this.isPlayingReference = target;
+    if (refBtn) {
+      refBtn.innerHTML = '<span>⏹️</span> Stop Reference';
+    }
+
+    const duration = this.config.soundType === 'sine' ? 10.0 : 1.8;
+    this.synth.playTone(note, duration);
+
+    this.refTimeout = window.setTimeout(() => {
+      if (this.isPlayingReference === target) {
+        if (refBtn) {
+          refBtn.innerHTML = '<span>🎵</span> Hear Reference';
+        }
+        this.isPlayingReference = null;
+        this.refTimeout = null;
+      }
+    }, duration * 1000);
   }
 
   /**
@@ -174,6 +228,21 @@ export class VoiceGameController {
    * @param {'bottom'|'top'} target - Target note to record.
    */
   async startRecording(target = 'bottom') {
+    if (this.synth && typeof this.synth.stopAll === 'function') {
+      this.synth.stopAll();
+    }
+    if (this.isPlayingReference) {
+      const refBtn = this.container.querySelector(`#voice-ref-${this.isPlayingReference}-btn`);
+      if (refBtn) {
+        refBtn.innerHTML = '<span>🎵</span> Hear Reference';
+      }
+      this.isPlayingReference = null;
+    }
+    if (this.refTimeout) {
+      clearTimeout(this.refTimeout);
+      this.refTimeout = null;
+    }
+
     if (this.isListening) {
       // Abort in-flight listening session immediately so user can restart a clean take without waiting
       this.stopRecordingTimer();
@@ -385,6 +454,11 @@ export class VoiceGameController {
    */
   nextQuestion() {
     if (this.currentQuestion < this.totalQuestions) {
+      if (this.refTimeout) {
+        clearTimeout(this.refTimeout);
+        this.refTimeout = null;
+      }
+      this.isPlayingReference = null;
       if (this.synth && typeof this.synth.stopAll === 'function') {
         this.synth.stopAll();
       }
@@ -809,6 +883,14 @@ export class VoiceGameController {
       clearInterval(this.timerInterval);
       this.timerInterval = null;
     }
+    if (this.refTimeout) {
+      clearTimeout(this.refTimeout);
+      this.refTimeout = null;
+    }
+    if (this.synth && typeof this.synth.stopAll === 'function') {
+      this.synth.stopAll();
+    }
+    this.isPlayingReference = null;
     this.stopRecordingTimer();
     this.container.innerHTML = '';
   }

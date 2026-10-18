@@ -45,6 +45,7 @@ export class PianoSynth {
     this.masterVolume = options.masterVolume !== undefined ? options.masterVolume : 1.0;
     this.masterGainNode = null;
     this.sampleBaseUrl = options.sampleBaseUrl || DEFAULT_SAMPLE_BASE_URL;
+    this.soundType = options.soundType || 'piano';
 
     /**
      * In-memory cache of decoded AudioBuffers keyed by sample filename.
@@ -65,6 +66,22 @@ export class PianoSynth {
      * @type {Set<{ stop?: Function, disconnect?: Function }>}
      */
     this.activeNodes = new Set();
+  }
+
+  /**
+   * Returns current sound generation type ('piano' or 'sine').
+   * @returns {'piano'|'sine'}
+   */
+  getSoundType() {
+    return this.soundType;
+  }
+
+  /**
+   * Sets sound generation type ('piano' or 'sine').
+   * @param {'piano'|'sine'} type
+   */
+  setSoundType(type) {
+    this.soundType = type === 'sine' ? 'sine' : 'piano';
   }
 
   /**
@@ -179,9 +196,10 @@ export class PianoSynth {
    * @param {number} [duration=2.0] - Tone duration in seconds.
    * @param {number|null} [startTime=null] - Scheduled start audio time (defaults to currentTime).
    * @param {number} [volume=1.0] - Note velocity volume (0.0 to 1.0).
+   * @param {Object} [options={}] - Additional tone options { soundType }.
    * @returns {Promise<void>}
    */
-  async playTone(freqOrNote, duration = 2.0, startTime = null, volume = 1.0) {
+  async playTone(freqOrNote, duration = 2.0, startTime = null, volume = 1.0, options = {}) {
     await this.ensureAudioRunning();
     const ctx = this.getContext();
     if (!ctx) {
@@ -189,6 +207,16 @@ export class PianoSynth {
     }
 
     const start = startTime !== null && startTime !== undefined ? startTime : ctx.currentTime;
+    const soundType = options.soundType || this.soundType;
+    const freq = typeof freqOrNote === 'string' ? noteToFreq(freqOrNote) : freqOrNote;
+
+    // Pure Sine Wave Mode
+    if (soundType === 'sine') {
+      if (!freq || freq <= 0) {
+        return Promise.resolve();
+      }
+      return this.playSineTone(freq, duration, start, volume);
+    }
 
     // Check if we can play a real recorded acoustic grand piano sample
     let sampleBuffer = null;
@@ -216,12 +244,76 @@ export class PianoSynth {
     }
 
     // Fallback to rich procedural additive synthesis
-    const freq = typeof freqOrNote === 'string' ? noteToFreq(freqOrNote) : freqOrNote;
     if (!freq || freq <= 0) {
       return;
     }
 
     return this.playProceduralTone(freq, duration, start, volume);
+  }
+
+  /**
+   * Plays a pure mathematical sine wave at the exact note frequency.
+   * Features a smooth click-free envelope suitable for reference tuning and vocal pitch matching.
+   * @private
+   * @param {number} freq - Frequency in Hz.
+   * @param {number} duration - Tone duration in seconds.
+   * @param {number} startTime - Scheduled audio time.
+   * @param {number} volume - Volume (0.0 to 1.0).
+   * @returns {Promise<void>}
+   */
+  playSineTone(freq, duration, startTime, volume) {
+    const ctx = this.getContext();
+    if (!ctx) {
+      return Promise.resolve();
+    }
+
+    const now = ctx.currentTime || 0;
+    const start = startTime !== null && startTime !== undefined ? Math.max(now, startTime) : now;
+
+    const osc = ctx.createOscillator();
+    const voiceGain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, start);
+
+    // Smooth envelope: 20ms linear attack to eliminate clicks, steady sustain, 80ms release ramp
+    const attack = 0.02;
+    const release = Math.min(0.08, duration * 0.1);
+    const releaseStart = Math.max(start + attack, start + duration - release);
+    const targetVolume = Math.max(0.0001, volume * 0.85);
+
+    voiceGain.gain.setValueAtTime(0.0001, start);
+    voiceGain.gain.linearRampToValueAtTime(targetVolume, start + attack);
+    voiceGain.gain.setValueAtTime(targetVolume, releaseStart);
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    osc.connect(voiceGain);
+    voiceGain.connect(this.masterGainNode || ctx.destination);
+
+    osc.start(start);
+    osc.stop(start + duration);
+
+    this.activeNodes.add(osc);
+    this.activeNodes.add(voiceGain);
+
+    setTimeout(() => {
+      this.activeNodes.delete(osc);
+      this.activeNodes.delete(voiceGain);
+      try {
+        if (typeof osc.disconnect === 'function') {
+          osc.disconnect();
+        }
+        if (typeof voiceGain.disconnect === 'function') {
+          voiceGain.disconnect();
+        }
+      } catch {
+        // Safe ignore
+      }
+    }, duration * 1000 + 50);
+
+    return new Promise((resolve) => {
+      setTimeout(resolve, duration * 1000);
+    });
   }
 
   /**

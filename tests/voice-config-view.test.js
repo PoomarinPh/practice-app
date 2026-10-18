@@ -228,6 +228,28 @@ describe('VoiceConfigView Component', () => {
     expect(m3Card.classList.contains('active')).toBe(true);
     expect(startBtn.disabled).toBe(false);
   });
+
+  it('allows toggling soundType between piano and sine wave, saving to preferences and updating config', () => {
+    const view = new VoiceConfigView(container);
+    expect(view.getConfig().soundType).toBe('piano');
+
+    const sineBtn = container.querySelector('[data-sound-type="sine"]');
+    expect(sineBtn).not.toBeNull();
+    sineBtn.click();
+
+    expect(view.getConfig().soundType).toBe('sine');
+    expect(sineBtn.classList.contains('active')).toBe(true);
+
+    const saved = JSON.parse(localStorage.getItem('voice_training_preferences'));
+    expect(saved.soundType).toBe('sine');
+
+    // Switch back to piano
+    const pianoBtn = container.querySelector('[data-sound-type="piano"]');
+    expect(pianoBtn).not.toBeNull();
+    pianoBtn.click();
+    expect(view.getConfig().soundType).toBe('piano');
+    expect(pianoBtn.classList.contains('active')).toBe(true);
+  });
 });
 
 

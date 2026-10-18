@@ -182,8 +182,12 @@ stateDiagram-v2
   - Allows selecting any combination; if all are unselected, a validation warning is displayed and the Start button is disabled until at least 1 interval is chosen.
 - **Question Count Chips:**
   - `[ 1 ]` `[ 5 ]` `[ 10 ]` `[ 15 ]` `[ 20 ]` (Default: `5`).
+- **Sound Timbre Selector:**
+  - `[ 🎹 Acoustic Piano ]` `[ 〰️ Pure Sine Wave (10s Reference) ]` (Default: `piano`).
+  - Stored in `localStorage` under `voice_training_preferences`.
+  - Configures synthesizer between realistic acoustic multi-harmonic piano sound and pure single-harmonic sine wave.
 - **Harmonic Playback:**
-  - Plays both interval notes simultaneously as a chord for ear training isolation.
+  - Plays both interval notes simultaneously as a chord for ear training isolation (2.2 seconds).
 - **Primary CTA:** Prominent **"Start Voice Drill 🎙️"** button (automatically disabled if 0 intervals are selected).
 
 ### 4.3 Screen 3: Active Voice Drill (`VoiceGameController`)
@@ -191,16 +195,16 @@ stateDiagram-v2
 - **Target Question Card:**
   - Prompt heading: *"Sing Both Notes (Bottom & Top)"*.
   - Interval identification tag (e.g. `Interval: Perfect 5th (P5)`).
-  - Audio playback button: `🔁 Replay Chord`.
+  - Audio playback button: `🔁 Replay Chord` (plays harmonic chord for 2.2s in either piano or pure sine wave timbre).
 - **Dual Note Target Cards (Center Interaction Area):**
   - **Bottom Note Card (Target 1):**
     - Target label & note name (e.g. `Bottom Note: C4`).
-    - Reference audio button: `🎵 Hear Reference`.
+    - Reference audio button: `🎵 Hear Reference` / `⏹️ Stop Reference`. When pure sine wave mode is active, the reference note plays continuously for **10.0 seconds** (or 1.8 seconds for acoustic piano). Clicking again immediately toggles off playback. Initiating recording immediately halts the reference playback to prevent bleed into the microphone.
     - Answering button: `Sing Bottom Note 🎤` (with live recording animation).
     - Post-sing tuner feedback: cent deviation meter, rating badge (`🌟 Flawless`, `🎯 In Tune`, `❌ Off-Pitch`), sung pitch vs target note, and `🔄 Re-sing Bottom Note`.
   - **Top Note Card (Target 2):**
     - Target label & note name (e.g. `Top Note: G4`).
-    - Reference audio button: `🎵 Hear Reference`.
+    - Reference audio button: `🎵 Hear Reference` / `⏹️ Stop Reference` (10.0s pure sine or 1.8s piano with toggle-off and recording-stop protection).
     - Answering button: `Sing Top Note 🎤` (with live recording animation).
     - Post-sing tuner feedback: cent deviation meter, rating badge, sung pitch vs target note, and `🔄 Re-sing Top Note`.
 - **Completion Gate & Strict Evaluation Rule:**

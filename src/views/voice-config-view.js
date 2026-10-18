@@ -28,6 +28,7 @@ export const DEFAULT_VOICE_CONFIG = Object.freeze({
   rangeTo: 'C5',
   questionCount: 5,
   playbackStyle: 'harmonic',
+  soundType: 'piano',
   enabledIntervals: Object.keys(INTERVAL_SEMITONES),
 });
 
@@ -79,6 +80,7 @@ export class VoiceConfigView {
     this.rangeTo = saved?.rangeTo || DEFAULT_VOICE_CONFIG.rangeTo;
     this.questionCount = saved?.questionCount || DEFAULT_VOICE_CONFIG.questionCount;
     this.playbackStyle = 'harmonic';
+    this.soundType = saved?.soundType || DEFAULT_VOICE_CONFIG.soundType || 'piano';
     this.enabledIntervals = Array.isArray(saved?.enabledIntervals) && saved.enabledIntervals.length > 0
       ? [...saved.enabledIntervals]
       : [...DEFAULT_VOICE_CONFIG.enabledIntervals];
@@ -110,6 +112,7 @@ export class VoiceConfigView {
       rangeTo: this.rangeTo,
       questionCount: this.questionCount,
       playbackStyle: this.playbackStyle,
+      soundType: this.soundType,
       enabledIntervals: [...this.enabledIntervals],
     };
   }
@@ -249,7 +252,32 @@ export class VoiceConfigView {
           </div>
         </section>
 
-        <!-- Section 3: Questions -->
+        <!-- Section 3: Sound Timbre -->
+        <section class="card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.25rem;">
+          <h2 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem; color: #e2e8f0; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🔊</span> Sound Timbre
+          </h2>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button
+              type="button"
+              class="chip-button ${this.soundType === 'piano' ? 'active' : ''}"
+              data-sound-type="piano"
+              style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
+            >
+              🎹 Acoustic Piano
+            </button>
+            <button
+              type="button"
+              class="chip-button ${this.soundType === 'sine' ? 'active' : ''}"
+              data-sound-type="sine"
+              style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
+            >
+              〰️ Pure Sine Wave (10s Reference)
+            </button>
+          </div>
+        </section>
+
+        <!-- Section 4: Questions -->
         <section class="card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem;">
           <h2 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem; color: #e2e8f0;">
             Questions
@@ -490,6 +518,18 @@ export class VoiceConfigView {
         const count = parseInt(chip.getAttribute('data-count'), 10);
         this.questionCount = count;
         countChips.forEach((c) => c.classList.remove('active'));
+        chip.classList.add('active');
+        this.savePreferences();
+      });
+    });
+
+    // Sound timbre chips
+    const soundTypeChips = this.container.querySelectorAll('[data-sound-type]');
+    soundTypeChips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const type = chip.getAttribute('data-sound-type');
+        this.soundType = type;
+        soundTypeChips.forEach((c) => c.classList.remove('active'));
         chip.classList.add('active');
         this.savePreferences();
       });

@@ -415,4 +415,71 @@ describe('VoiceGameController Active Drill', () => {
     expect(controller.bottomResult).not.toBeNull();
     expect(controller.isListening).toBe(false);
   });
+
+  it('plays reference note for 10 seconds when soundType is sine, but keeps interval chord at 2.2s', () => {
+    mockSynth.stopAll = vi.fn();
+    mockSynth.setSoundType = vi.fn();
+
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+        soundType: 'sine',
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    expect(mockSynth.setSoundType).toHaveBeenCalledWith('sine');
+
+    // Interval chord playback length remains 2.2s
+    mockSynth.playChord.mockClear();
+    controller.playCurrentInterval();
+    expect(mockSynth.playChord).toHaveBeenCalledWith(
+      [controller.bottomNote, controller.topNote],
+      2.2
+    );
+
+    // Reference note playback lasts 10.0 seconds
+    mockSynth.playTone.mockClear();
+    const refBtn = container.querySelector('#voice-ref-bottom-btn');
+    expect(refBtn).not.toBeNull();
+    refBtn.click();
+
+    expect(mockSynth.playTone).toHaveBeenCalledWith(
+      controller.bottomNote,
+      10.0
+    );
+    expect(refBtn.textContent).toContain('Stop Reference');
+
+    // Clicking again toggles off
+    refBtn.click();
+    expect(mockSynth.stopAll).toHaveBeenCalled();
+    expect(refBtn.textContent).toContain('Hear Reference');
+  });
+
+  it('stops playing reference note immediately when user starts recording', async () => {
+    mockSynth.stopAll = vi.fn();
+
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        soundType: 'sine',
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    // Start reference note
+    controller.playTargetPitch('bottom');
+    expect(controller.isPlayingReference).toBe('bottom');
+
+    // Start recording bottom note
+    await controller.startRecording('bottom');
+    expect(mockSynth.stopAll).toHaveBeenCalled();
+    expect(controller.isPlayingReference).toBeNull();
+    controller.stopRecordingTimer();
+  });
 });
