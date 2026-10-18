@@ -45,7 +45,7 @@ describe('VoiceGameController Active Drill', () => {
     }
   });
 
-  it('initializes round with question 1 of N and generates prompt within vocal range', () => {
+  it('initializes round with question 1 of N and provides answer buttons for both Bottom and Top notes', () => {
     const controller = new VoiceGameController(
       container,
       {
@@ -55,7 +55,6 @@ describe('VoiceGameController Active Drill', () => {
         rangeTo: 'C5',
         enabledIntervals: ['P5'],
         questionCount: 3,
-        playbackStyle: 'melodic',
       },
       {},
       { synth: mockSynth, detector: mockDetector }
@@ -64,16 +63,28 @@ describe('VoiceGameController Active Drill', () => {
     expect(controller.currentQuestion).toBe(1);
     expect(controller.totalQuestions).toBe(3);
     expect(controller.activeInterval).toBe('P5');
-    expect(['bottom', 'top']).toContain(controller.prompt);
-    expect(controller.targetNote).toBeDefined();
+    expect(controller.bottomNote).toBeDefined();
+    expect(controller.topNote).toBeDefined();
+    expect(controller.bottomResult).toBeNull();
+    expect(controller.topResult).toBeNull();
 
     // Verify UI reflects question progress
     const progressEl = container.querySelector('#voice-stat-progress');
     expect(progressEl.textContent).toContain('Q 1 / 3');
 
-    // Verify prompt heading
+    // Verify prompt card heading
     const promptHeading = container.querySelector('.voice-prompt-card h2');
-    expect(promptHeading.textContent).toMatch(/Sing the (TOP|BOTTOM) Note/);
+    expect(promptHeading.textContent).toContain('Both Notes');
+
+    // Verify presence of two answer buttons
+    const bottomBtn = container.querySelector('#voice-sing-bottom-btn');
+    const topBtn = container.querySelector('#voice-sing-top-btn');
+    expect(bottomBtn).not.toBeNull();
+    expect(topBtn).not.toBeNull();
+
+    // Verify Next Question button is NOT present before answering
+    const nextBtn = container.querySelector('#voice-next-btn');
+    expect(nextBtn).toBeNull();
   });
 
   it('triggers harmonic interval playback when Replay button is clicked', () => {
@@ -97,7 +108,7 @@ describe('VoiceGameController Active Drill', () => {
     );
   });
 
-  it('processes sung vocal input and renders cent tuner feedback', async () => {
+  it('allows answering Bottom Note first, showing feedback while Top remains pending', async () => {
     const controller = new VoiceGameController(
       container,
       {
@@ -108,38 +119,49 @@ describe('VoiceGameController Active Drill', () => {
       { synth: mockSynth, detector: mockDetector }
     );
 
-    // Simulate singing close to target note
-    const targetFreq = controller.targetFreq;
-    mockDetector.sampleCurrentPitch = vi.fn(() => ({
-      pitch: targetFreq * Math.pow(2, 8 / 1200), // 8 cents sharp -> 'flawless'
-      isVoiced: true,
-      clarity: 0.98,
-    }));
-
-    // Perform voice capture directly or simulate recording
+    // Sing bottom note (+8 cents sharp)
+    const bottomFreq = controller.bottomFreq;
     await controller.processPitchSamples([
-      targetFreq * Math.pow(2, 8 / 1200),
-      targetFreq * Math.pow(2, 7 / 1200),
-      targetFreq * Math.pow(2, 9 / 1200),
-    ]);
+      bottomFreq * Math.pow(2, 8 / 1200),
+    ], 'bottom');
 
-    // Expect tuner card to appear
-    const tunerCard = container.querySelector('#voice-tuner-card');
-    expect(tunerCard).not.toBeNull();
+    expect(controller.bottomResult).not.toBeNull();
+    expect(controller.topResult).toBeNull();
 
-    // Check rating badge
-    const ratingBadge = container.querySelector('.voice-rating-badge');
-    expect(ratingBadge.textContent).toContain('Flawless');
+    // Bottom note tuner feedback appears
+    const bottomFeedback = container.querySelector('#tuner-feedback-bottom');
+    expect(bottomFeedback).not.toBeNull();
+    expect(bottomFeedback.textContent).toContain('Flawless');
 
-    // Check cent deviation display
-    const centsDisplay = container.querySelector('#tuner-cents-value');
-    expect(centsDisplay.textContent).toMatch(/\+8/);
+    // Top note is still pending and shows answer CTA
+    const topBtn = container.querySelector('#voice-sing-top-btn');
+    expect(topBtn).not.toBeNull();
 
-    // Check that target note audio was played as reference
-    expect(mockSynth.playTone).toHaveBeenCalledWith(controller.targetNote, expect.any(Number));
+    // Next button is STILL blocked because top note is not yet answered
+    expect(container.querySelector('#voice-next-btn')).toBeNull();
   });
 
-  it('records guess into permanent storage with exerciseId voice-training', async () => {
+  it('requires both notes to be answered before allowing progression to next question', async () => {
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 2,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    // Only sing bottom note
+    await controller.processPitchSamples([controller.bottomFreq], 'bottom');
+    expect(container.querySelector('#voice-next-btn')).toBeNull();
+
+    // Now sing top note
+    await controller.processPitchSamples([controller.topFreq], 'top');
+    expect(container.querySelector('#voice-next-btn')).not.toBeNull();
+  });
+
+  it('evaluates question as isCorrect: true only if BOTH Bottom and Top notes are in tune', async () => {
     const controller = new VoiceGameController(
       container,
       {
@@ -150,16 +172,43 @@ describe('VoiceGameController Active Drill', () => {
       { synth: mockSynth, detector: mockDetector }
     );
 
-    await controller.processPitchSamples([controller.targetFreq]);
+    // Both notes sung in-tune (within 50 cents)
+    await controller.processPitchSamples([controller.bottomFreq], 'bottom');
+    await controller.processPitchSamples([controller.topFreq], 'top');
+
+    expect(controller.questions.length).toBe(1);
+    expect(controller.questions[0].isCorrect).toBe(true);
 
     const store = getDataStore();
     expect(store.history.length).toBe(1);
-    expect(store.history[0].exerciseId).toBe('voice-training');
-    expect(store.history[0].mode).toBe('interval-breakdown');
     expect(store.history[0].isCorrect).toBe(true);
   });
 
-  it('advances through questions and triggers onFinish when round completes', async () => {
+  it('evaluates question as isCorrect: false if EITHER Bottom or Top note is out of tune', async () => {
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    // Bottom note is in tune (+5 cents)
+    await controller.processPitchSamples([controller.bottomFreq * Math.pow(2, 5 / 1200)], 'bottom');
+    // Top note is out of tune (+75 cents sharp)
+    await controller.processPitchSamples([controller.topFreq * Math.pow(2, 75 / 1200)], 'top');
+
+    expect(controller.questions.length).toBe(1);
+    expect(controller.questions[0].isCorrect).toBe(false);
+
+    const store = getDataStore();
+    expect(store.history.length).toBe(1);
+    expect(store.history[0].isCorrect).toBe(false);
+  });
+
+  it('advances through questions and triggers onFinish when round completes with dual-note answers', async () => {
     const onFinish = vi.fn();
     const controller = new VoiceGameController(
       container,
@@ -171,8 +220,9 @@ describe('VoiceGameController Active Drill', () => {
       { synth: mockSynth, detector: mockDetector }
     );
 
-    // Answer Q1
-    await controller.processPitchSamples([controller.targetFreq]);
+    // Answer Q1: both notes
+    await controller.processPitchSamples([controller.bottomFreq], 'bottom');
+    await controller.processPitchSamples([controller.topFreq], 'top');
     const nextBtn = container.querySelector('#voice-next-btn');
     expect(nextBtn).not.toBeNull();
     nextBtn.click();
@@ -180,9 +230,12 @@ describe('VoiceGameController Active Drill', () => {
     // Now on Q2
     expect(controller.currentQuestion).toBe(2);
     expect(container.querySelector('#voice-stat-progress').textContent).toContain('Q 2 / 2');
+    expect(controller.bottomResult).toBeNull();
+    expect(controller.topResult).toBeNull();
 
-    // Answer Q2
-    await controller.processPitchSamples([controller.targetFreq]);
+    // Answer Q2: both notes
+    await controller.processPitchSamples([controller.bottomFreq], 'bottom');
+    await controller.processPitchSamples([controller.topFreq], 'top');
     const finishBtn = container.querySelector('#voice-finish-btn');
     expect(finishBtn).not.toBeNull();
     finishBtn.click();

@@ -193,4 +193,60 @@ describe('VoiceSummaryView Component', () => {
 
     expect(onHome).toHaveBeenCalled();
   });
+
+  it('renders both Bottom Note and Top Note breakdown rows for dual-note question data', () => {
+    const dualNoteSessionData = {
+      exerciseId: 'voice-training',
+      mode: 'interval-breakdown',
+      totalQuestions: 1,
+      correctCount: 1,
+      accuracyPercent: 100,
+      questions: [
+        {
+          questionNumber: 1,
+          interval: 'P5',
+          bottomNote: 'C4',
+          topNote: 'G4',
+          targetNote: 'C4 & G4',
+          bottom: {
+            targetNote: 'C4',
+            detectedNote: 'C4',
+            evaluation: { cents: 3.5, rating: 'flawless', isCorrect: true },
+          },
+          top: {
+            targetNote: 'G4',
+            detectedNote: 'G4',
+            evaluation: { cents: -8.0, rating: 'in-tune', isCorrect: true },
+          },
+          cents: 5.8,
+          rating: 'in-tune',
+          score: 94,
+          isCorrect: true,
+        },
+      ],
+    };
+
+    new VoiceSummaryView(container, {
+      sessionData: dualNoteSessionData,
+      synth: mockSynth,
+    });
+
+    const recapCard = container.querySelector('.voice-recap-card');
+    expect(recapCard).not.toBeNull();
+    expect(recapCard.textContent).toContain('C4 & G4');
+    expect(recapCard.textContent).toContain('Bottom Note');
+    expect(recapCard.textContent).toContain('Top Note');
+
+    const bottomPlayBtn = container.querySelector('[data-replay-note="C4"]');
+    const topPlayBtn = container.querySelector('[data-replay-note="G4"]');
+    expect(bottomPlayBtn).not.toBeNull();
+    expect(topPlayBtn).not.toBeNull();
+
+    bottomPlayBtn.click();
+    expect(mockSynth.playTone).toHaveBeenCalledWith('C4', expect.any(Number));
+
+    topPlayBtn.click();
+    expect(mockSynth.playTone).toHaveBeenCalledWith('G4', expect.any(Number));
+  });
 });
+

@@ -177,34 +177,38 @@ stateDiagram-v2
   - Plays both interval notes simultaneously as a chord for ear training isolation.
 - **Primary CTA:** Prominent **"Start Voice Drill 🎙️"** button.
 
-### 4.3 Screen 3: Active Voice Drill (`voice-game-view.js`)
-- **Top Header:** Exit button, round timer, Question indicator (`Q 2 / 5`).
+### 4.3 Screen 3: Active Voice Drill (`VoiceGameController`)
+- **Top Header:** Exit button, round timer, Question indicator (`Q 2 / 5`), Completion pill (`0 / 2 Notes`, `1 / 2 Notes`, `✓ Both Sung`).
 - **Target Question Card:**
-  - Large prompt banner: *"Sing the BOTTOM Note"* or *"Sing the TOP Note"*.
-  - Interval identification tag (e.g. `Interval: Perfect 5th (7 Semitones)`).
-  - Audio playback button: `🔁 Play Notes Again`.
-- **Microphone Interaction Card (Center):**
-  - Big circular recording CTA button: `🎤 Tap to Sing` (with pulsating live ring).
-  - Real-time vocal waveform / volume visualizer.
-  - Automatic 1.5–2.0 second capture window.
-- **Immediate Feedback & Tuner Dial (Post-recording):**
-  - **Tuner Gauge:** Horizontal / circular cent meter showing deviation ($-50\text{c} \dots 0 \dots +50\text{c}$).
-  - **Note Comparison:**
-    - Target Note: `G4 (392.0 Hz)`
-    - Detected Note: `G#4 (415.3 Hz)` $\implies +42\text{ cents } \sharp$
-  - Status Badge: `🌟 In Tune!` or `❌ Flat / Sharp`.
-  - Plays the isolated target piano note so the user can hear and match the pitch.
-- **CTA:** `Next Note →` or `View Summary` (on question 5/5).
+  - Prompt heading: *"Sing Both Notes (Bottom & Top)"*.
+  - Interval identification tag (e.g. `Interval: Perfect 5th (P5)`).
+  - Audio playback button: `🔁 Replay Chord`.
+- **Dual Note Target Cards (Center Interaction Area):**
+  - **Bottom Note Card (Target 1):**
+    - Target label & note name (e.g. `Bottom Note: C4`).
+    - Reference audio button: `🎵 Hear Reference`.
+    - Answering button: `Sing Bottom Note 🎤` (with live recording animation).
+    - Post-sing tuner feedback: cent deviation meter, rating badge (`🌟 Flawless`, `🎯 In Tune`, `❌ Off-Pitch`), sung pitch vs target note, and `🔄 Re-sing Bottom Note`.
+  - **Top Note Card (Target 2):**
+    - Target label & note name (e.g. `Top Note: G4`).
+    - Reference audio button: `🎵 Hear Reference`.
+    - Answering button: `Sing Top Note 🎤` (with live recording animation).
+    - Post-sing tuner feedback: cent deviation meter, rating badge, sung pitch vs target note, and `🔄 Re-sing Top Note`.
+- **Completion Gate & Strict Evaluation Rule:**
+  - Both notes must be answered before the user can advance (`Next Question →` is gated until both notes have been recorded).
+  - **Strict Accuracy Rule:** Both notes must be in-tune ($\le \pm 50\text{c}$) for the question to be marked correct (`isCorrect: true`). If either note is out of tune, the entire question is marked incorrect (`isCorrect: false`).
+  - Question outcome banner indicates whether both notes passed or if any was missed.
+- **CTA:** `Next Question →` or `View Summary 🏆` (on final question).
 
-### 4.4 Screen 4: Voice Session Summary (`voice-summary-view.js`)
+### 4.4 Screen 4: Voice Session Summary (`VoiceSummaryView`)
 - Total Accuracy % for the round.
 - Solved / Wrong count (e.g. `4 / 5 Notes Matched`).
-- Recap table:
-  - Interval tested (`P5`, `m3`, etc.)
-  - Prompt asked (`Top` vs `Bottom`)
-  - Target Note vs User Sung Pitch
-  - Cents deviation ($\pm \text{cents}$)
-  - Status icon (`✓` / `✗`)
+- Average absolute cents deviation across the session.
+- Per-interval performance breakdown table.
+- Question recap cards:
+  - Interval tested (`P5`, `m3`, etc.) with dual-target note header (e.g. `C4 & G4`).
+  - Status badge: `🎯 Passed (Both in tune)` or `❌ Missed`.
+  - Individual breakdown rows for both **Bottom Note** and **Top Note** displaying Target, Replay Note button, Sung note, and cents deviation.
 - Actions: `Play Again 🎙️`, `Change Settings ⚙️`, `Back to Hub 🏠`.
 
 ---

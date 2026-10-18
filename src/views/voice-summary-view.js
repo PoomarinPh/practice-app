@@ -192,12 +192,16 @@ export class VoiceSummaryView {
                   ? '🎯 In Tune'
                   : '❌ Off-Pitch';
               const centsText = `${q.cents !== undefined && q.cents >= 0 ? '+' : ''}${q.cents ?? 0}c`;
+              const hasDualNotes = Boolean(q.bottom && q.top);
+              const headerContext = hasDualNotes
+                ? `${q.bottom.targetNote} & ${q.top.targetNote}`
+                : (q.prompt || 'Target').toUpperCase();
 
               return `
                 <article class="voice-recap-card recap-card" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 0.75rem; padding: 1rem;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                     <div style="font-weight: 700; font-size: 0.95rem; color: #e2e8f0;">
-                      Q${q.questionNumber}: ${q.interval} (${(q.prompt || 'Target').toUpperCase()})
+                      Q${q.questionNumber}: ${q.interval} (${headerContext})
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
                       <span class="recap-status-pill ${statusClass}" style="
@@ -216,26 +220,74 @@ export class VoiceSummaryView {
                     </div>
                   </div>
 
-                  <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.25); padding: 0.6rem 0.85rem; border-radius: 0.5rem;">
-                    <div>
-                      <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 0.15rem;">Target Pitch</span>
-                      <span style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${q.targetNote}</span>
-                    </div>
+                  ${hasDualNotes ? `
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                      <!-- Bottom Note Row -->
+                      <div class="note-recap-row" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.25); padding: 0.55rem 0.85rem; border-radius: 0.5rem;">
+                        <div>
+                          <span style="font-size: 0.7rem; color: #38bdf8; font-weight: 700; display: block;">Bottom Note</span>
+                          <span style="font-size: 1.15rem; font-weight: 800; color: #f8fafc;">${q.bottom.targetNote}</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-sm"
+                          data-replay-note="${q.bottom.targetNote}"
+                          style="font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.3rem;"
+                        >
+                          <span>🎵</span> Play Note
+                        </button>
+                        <div style="text-align: right;">
+                          <span style="font-size: 0.7rem; color: #94a3b8; display: block;">Sung: ${q.bottom.detectedNote} (${q.bottom.evaluation.cents >= 0 ? '+' : ''}${q.bottom.evaluation.cents}c)</span>
+                          <span style="font-size: 0.85rem; font-weight: 700; color: ${q.bottom.evaluation.isCorrect ? '#34d399' : '#f87171'};">
+                            ${q.bottom.evaluation.rating === 'flawless' ? '🌟 Flawless' : q.bottom.evaluation.isCorrect ? '🎯 In Tune' : '❌ Off-Pitch'}
+                          </span>
+                        </div>
+                      </div>
 
-                    <button
-                      type="button"
-                      class="btn btn-secondary btn-sm"
-                      data-replay-note="${q.targetNote}"
-                      style="font-size: 0.75rem; padding: 0.35rem 0.7rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.3rem;"
-                    >
-                      <span>🎵</span> Play Note
-                    </button>
-
-                    <div style="text-align: right;">
-                      <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 0.15rem;">Your Pitch</span>
-                      <span style="font-size: 1.25rem; font-weight: 800; color: ${q.isCorrect ? '#34d399' : '#f87171'};">${q.detectedNote || '--'}</span>
+                      <!-- Top Note Row -->
+                      <div class="note-recap-row" style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.25); padding: 0.55rem 0.85rem; border-radius: 0.5rem;">
+                        <div>
+                          <span style="font-size: 0.7rem; color: #a78bfa; font-weight: 700; display: block;">Top Note</span>
+                          <span style="font-size: 1.15rem; font-weight: 800; color: #f8fafc;">${q.top.targetNote}</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="btn btn-secondary btn-sm"
+                          data-replay-note="${q.top.targetNote}"
+                          style="font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.3rem;"
+                        >
+                          <span>🎵</span> Play Note
+                        </button>
+                        <div style="text-align: right;">
+                          <span style="font-size: 0.7rem; color: #94a3b8; display: block;">Sung: ${q.top.detectedNote} (${q.top.evaluation.cents >= 0 ? '+' : ''}${q.top.evaluation.cents}c)</span>
+                          <span style="font-size: 0.85rem; font-weight: 700; color: ${q.top.evaluation.isCorrect ? '#34d399' : '#f87171'};">
+                            ${q.top.evaluation.rating === 'flawless' ? '🌟 Flawless' : q.top.evaluation.isCorrect ? '🎯 In Tune' : '❌ Off-Pitch'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ` : `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.25); padding: 0.6rem 0.85rem; border-radius: 0.5rem;">
+                      <div>
+                        <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 0.15rem;">Target Pitch</span>
+                        <span style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${q.targetNote}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        class="btn btn-secondary btn-sm"
+                        data-replay-note="${q.targetNote}"
+                        style="font-size: 0.75rem; padding: 0.35rem 0.7rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.3rem;"
+                      >
+                        <span>🎵</span> Play Note
+                      </button>
+
+                      <div style="text-align: right;">
+                        <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 0.15rem;">Your Pitch</span>
+                        <span style="font-size: 1.25rem; font-weight: 800; color: ${q.isCorrect ? '#34d399' : '#f87171'};">${q.detectedNote || '--'}</span>
+                      </div>
+                    </div>
+                  `}
                 </article>
               `;
             }).join('')}
