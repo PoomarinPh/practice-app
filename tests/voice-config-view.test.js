@@ -172,4 +172,62 @@ describe('VoiceConfigView Component', () => {
 
     expect(onBack).toHaveBeenCalled();
   });
+
+  it('unselects all intervals when clicking Unselect All button and disables start button', () => {
+    const onStart = vi.fn();
+    const view = new VoiceConfigView(container, { onStart });
+
+    const unselectAllBtn = container.querySelector('#btn-unselect-all-intervals');
+    expect(unselectAllBtn).not.toBeNull();
+    unselectAllBtn.click();
+
+    expect(view.getConfig().enabledIntervals).toEqual([]);
+    const activeCards = container.querySelectorAll('.interval-toggle-card.active');
+    expect(activeCards.length).toBe(0);
+
+    const startBtn = container.querySelector('#start-exercise-btn, #start-voice-drill-btn');
+    expect(startBtn.disabled).toBe(true);
+
+    startBtn.click();
+    expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it('selects all intervals when clicking Select All button', () => {
+    const view = new VoiceConfigView(container);
+    const unselectAllBtn = container.querySelector('#btn-unselect-all-intervals');
+    expect(unselectAllBtn).not.toBeNull();
+    unselectAllBtn.click();
+    expect(view.getConfig().enabledIntervals.length).toBe(0);
+
+    const selectAllBtn = container.querySelector('#btn-select-all-intervals');
+    expect(selectAllBtn).not.toBeNull();
+    selectAllBtn.click();
+
+    expect(view.getConfig().enabledIntervals.length).toBe(12);
+    const activeCards = container.querySelectorAll('.interval-toggle-card.active');
+    expect(activeCards.length).toBe(12);
+
+    const startBtn = container.querySelector('#start-exercise-btn, #start-voice-drill-btn');
+    expect(startBtn.disabled).toBe(false);
+  });
+
+  it('allows selecting an interval after unselecting all and re-enables start button', () => {
+    const view = new VoiceConfigView(container);
+    const unselectAllBtn = container.querySelector('#btn-unselect-all-intervals');
+    unselectAllBtn.click();
+    expect(view.getConfig().enabledIntervals.length).toBe(0);
+
+    const startBtn = container.querySelector('#start-exercise-btn, #start-voice-drill-btn');
+    expect(startBtn.disabled).toBe(true);
+
+    const m3Card = container.querySelector('[data-interval="m3"]');
+    expect(m3Card).not.toBeNull();
+    m3Card.click();
+
+    expect(view.getConfig().enabledIntervals).toEqual(['m3']);
+    expect(m3Card.classList.contains('active')).toBe(true);
+    expect(startBtn.disabled).toBe(false);
+  });
 });
+
+

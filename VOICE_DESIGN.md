@@ -168,14 +168,16 @@ stateDiagram-v2
   - Preset quick chips: `[ Tenor / Bass (C3-E4) ]` `[ Alto / Soprano (A3-C5) ]` `[ Full Range (C3-C7) ]`.
   - Stored in `localStorage` and remembered on subsequent visits.
 - **12 Interval Toggle Chips (with 30-Day Accuracy Stats):**
-  - Each chip shows interval name (`m2`, `M2`, `m3`, ..., `P8`).
+  - Section header includes active interval counter (`Active Intervals (N/12)`).
+  - Quick actions: `[ Select All ]` and `[ Unselect All ]` buttons.
+  - Each chip shows interval name (`m2`, `M2`, `m3`, ..., `P8`) and semitones.
   - Below each chip, displays rolling 30-day accuracy badge (e.g. `92% Acc · 12 Solved` or `No data`).
-  - Allows selecting any combination (at least 1 must remain enabled).
+  - Allows selecting any combination; if all are unselected, a validation warning is displayed and the Start button is disabled until at least 1 interval is chosen.
 - **Question Count Chips:**
   - `[ 1 ]` `[ 5 ]` `[ 10 ]` `[ 15 ]` `[ 20 ]` (Default: `5`).
 - **Harmonic Playback:**
   - Plays both interval notes simultaneously as a chord for ear training isolation.
-- **Primary CTA:** Prominent **"Start Voice Drill 🎙️"** button.
+- **Primary CTA:** Prominent **"Start Voice Drill 🎙️"** button (automatically disabled if 0 intervals are selected).
 
 ### 4.3 Screen 3: Active Voice Drill (`VoiceGameController`)
 - **Top Header:** Exit button, round timer, Question indicator (`Q 2 / 5`), Completion pill (`0 / 2 Notes`, `1 / 2 Notes`, `✓ Both Sung`).

@@ -116,13 +116,14 @@ export class VoiceConfigView {
 
   /**
    * Programmatically updates enabled intervals.
-   * @param {string[]} intervals
+   * @param {string[]} intervals - List of interval codes.
    */
   setEnabledIntervals(intervals) {
-    if (intervals && intervals.length > 0) {
+    if (Array.isArray(intervals)) {
       this.enabledIntervals = [...intervals];
       this.savePreferences();
       this.updateIntervalUI();
+      this.updateStartButtonState();
     }
   }
 
@@ -232,15 +233,19 @@ export class VoiceConfigView {
         <section class="card" style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
             <h2 style="font-size: 1.05rem; font-weight: 700; margin: 0; color: #e2e8f0; display: flex; align-items: center; gap: 0.5rem;">
-              <span>🎹</span> Active Intervals (12)
+              <span>🎹</span> Active Intervals (<span id="active-intervals-count">${this.enabledIntervals.length}</span>/12)
             </h2>
             <div style="display: flex; gap: 0.5rem;">
-              <button id="btn-select-all-intervals" type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">All</button>
+              <button id="btn-select-all-intervals" type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Select All</button>
+              <button id="btn-unselect-all-intervals" type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">Unselect All</button>
             </div>
           </div>
 
           <div id="intervals-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 0.6rem;">
             <!-- Populated via updateIntervalUI -->
+          </div>
+          <div id="intervals-validation-msg" style="color: #f87171; font-size: 0.8rem; margin-top: 0.6rem; text-align: center; display: ${this.enabledIntervals.length === 0 ? 'block' : 'none'};">
+            ⚠️ Please select at least 1 interval to start the drill.
           </div>
         </section>
 
@@ -279,6 +284,42 @@ export class VoiceConfigView {
 
     this.updateIntervalUI();
     this.bindEvents();
+    this.updateStartButtonState();
+  }
+
+  /**
+   * Synchronizes Start button enabled state and validation message with enabled intervals count.
+   */
+  updateStartButtonState() {
+    const startBtn = this.container.querySelector('#start-exercise-btn, #start-voice-drill-btn');
+    const validationMsg = this.container.querySelector('#intervals-validation-msg');
+    const countEl = this.container.querySelector('#active-intervals-count');
+
+    if (countEl) {
+      countEl.textContent = this.enabledIntervals.length;
+    }
+
+    if (this.enabledIntervals.length === 0) {
+      if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.style.opacity = '0.5';
+        startBtn.style.cursor = 'not-allowed';
+        startBtn.style.boxShadow = 'none';
+      }
+      if (validationMsg) {
+        validationMsg.style.display = 'block';
+      }
+    } else {
+      if (startBtn) {
+        startBtn.disabled = false;
+        startBtn.style.opacity = '1';
+        startBtn.style.cursor = 'pointer';
+        startBtn.style.boxShadow = '0 10px 25px -5px rgba(56, 189, 248, 0.4)';
+      }
+      if (validationMsg) {
+        validationMsg.style.display = 'none';
+      }
+    }
   }
 
   /**
@@ -407,6 +448,14 @@ export class VoiceConfigView {
       });
     }
 
+    // Unselect All Intervals
+    const unselectAllBtn = this.container.querySelector('#btn-unselect-all-intervals');
+    if (unselectAllBtn) {
+      unselectAllBtn.addEventListener('click', () => {
+        this.setEnabledIntervals([]);
+      });
+    }
+
     // Intervals Delegation
     const intervalsGrid = this.container.querySelector('#intervals-grid');
     if (intervalsGrid) {
@@ -430,6 +479,7 @@ export class VoiceConfigView {
 
         this.savePreferences();
         this.updateIntervalUI();
+        this.updateStartButtonState();
       });
     }
 
@@ -445,11 +495,13 @@ export class VoiceConfigView {
       });
     });
 
-
     // Start Drill CTA
     const startBtn = this.container.querySelector('#start-exercise-btn, #start-voice-drill-btn');
     if (startBtn && this.onStart) {
       startBtn.addEventListener('click', () => {
+        if (this.enabledIntervals.length === 0) {
+          return;
+        }
         this.onStart(this.getConfig());
       });
     }
