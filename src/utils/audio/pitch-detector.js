@@ -11,8 +11,8 @@ import { centsDifference } from './notes.js';
  * Default YIN algorithm configuration options.
  */
 export const DEFAULT_YIN_OPTIONS = Object.freeze({
-  minRms: 0.015,
-  threshold: 0.12,
+  minRms: 0.005,
+  threshold: 0.18,
   minFreq: 65,
   maxFreq: 2200,
 });
@@ -271,9 +271,9 @@ export class PitchDetector {
    * @param {Object} [options={}]
    * @param {AudioContext} [options.audioContext] - Existing Web Audio context.
    * @param {number} [options.fftSize=2048] - AnalyserNode FFT size.
-   * @param {number} [options.minRms=0.015] - Silence gating threshold.
+   * @param {number} [options.minRms=0.005] - Silence gating threshold.
    */
-  constructor({ audioContext = null, fftSize = 2048, minRms = 0.015 } = {}) {
+  constructor({ audioContext = null, fftSize = 2048, minRms = 0.005 } = {}) {
     /** @type {AudioContext|null} */
     this.audioContext = audioContext;
     this.fftSize = fftSize;

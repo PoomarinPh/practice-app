@@ -178,8 +178,11 @@ export class VoiceGameController {
 
       this.recordingInterval = window.setInterval(() => {
         const result = this.detector.sampleCurrentPitch();
-        if (result.isVoiced && result.pitch && result.clarity > 0.6) {
+        if (result.isVoiced && result.pitch && result.clarity > 0.35) {
           samples.push(result.pitch);
+          if (singBtn && !singBtn.textContent.includes('Voice detected')) {
+            singBtn.textContent = 'Listening... 🟢 Voice detected!';
+          }
         }
       }, sampleIntervalMs);
 
@@ -227,7 +230,7 @@ export class VoiceGameController {
     if (validSamples.length === 0) {
       const singBtn = this.container.querySelector(`#voice-sing-${activeTarget}-btn`);
       if (singBtn) {
-        singBtn.textContent = 'No voice detected. Tap to try again 🎤';
+        singBtn.textContent = 'Too quiet. Hum/sing a bit louder 🎤';
         singBtn.classList.remove('pulse-recording');
       }
       return;
