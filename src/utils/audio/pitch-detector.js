@@ -328,6 +328,8 @@ export class PitchDetector {
 
   /**
    * Requests microphone access via getUserMedia and starts pitch detection.
+   * Disables echo cancellation and AGC to prevent mobile browsers (iOS Safari / Android)
+   * from degrading audio into low-volume telephony / voice-call earpiece mode.
    * @returns {Promise<MediaStream>} Active audio stream.
    */
   async startMicrophone() {
@@ -335,11 +337,19 @@ export class PitchDetector {
       throw new Error('Microphone access is not supported by this browser environment');
     }
 
+    if (typeof navigator !== 'undefined' && navigator.audioSession) {
+      try {
+        navigator.audioSession.type = 'play-and-record';
+      } catch {
+        // Safe ignore
+      }
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: {
-        echoCancellation: true,
+        echoCancellation: false,
         noiseSuppression: false,
-        autoGainControl: true,
+        autoGainControl: false,
       },
     });
 
@@ -348,7 +358,8 @@ export class PitchDetector {
   }
 
   /**
-   * Stops listening, disconnects audio nodes, and terminates media tracks.
+   * Stops listening, disconnects audio nodes, terminates media tracks,
+   * and restores audio session to media playback.
    */
   stop() {
     if (this.sourceNode) {
@@ -363,7 +374,10 @@ export class PitchDetector {
     if (this.mediaStream) {
       try {
         const tracks = this.mediaStream.getTracks();
-        tracks.forEach((track) => track.stop());
+        tracks.forEach((track) => {
+          track.enabled = false;
+          track.stop();
+        });
       } catch {
         // Ignore track stop errors
       }
@@ -373,6 +387,14 @@ export class PitchDetector {
     this.analyserNode = null;
     this.timeBuffer = null;
     this.isListening = false;
+
+    if (typeof navigator !== 'undefined' && navigator.audioSession) {
+      try {
+        navigator.audioSession.type = 'playback';
+      } catch {
+        // Safe ignore
+      }
+    }
   }
 
   /**

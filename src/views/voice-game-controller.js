@@ -257,6 +257,9 @@ export class VoiceGameController {
       this.topResult = result;
     }
 
+    // Yield briefly to allow mobile OS audio session to restore loudspeaker routing
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
     // Playback target reference note so singer can audibly compare
     this.synth.playTone(targetNote, 1.8);
 

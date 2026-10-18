@@ -37,12 +37,12 @@ export class PianoSynth {
   /**
    * @param {Object} [options={}] - Synthesizer options.
    * @param {AudioContext} [options.audioContext] - Existing or mock audio context.
-   * @param {number} [options.masterVolume=0.8] - Master volume multiplier.
+   * @param {number} [options.masterVolume=1.0] - Master volume multiplier.
    * @param {string} [options.sampleBaseUrl] - Custom base URL for MP3 samples.
    */
   constructor(options = {}) {
     this.ctx = options.audioContext || null;
-    this.masterVolume = options.masterVolume !== undefined ? options.masterVolume : 0.8;
+    this.masterVolume = options.masterVolume !== undefined ? options.masterVolume : 1.0;
     this.masterGainNode = null;
     this.sampleBaseUrl = options.sampleBaseUrl || DEFAULT_SAMPLE_BASE_URL;
 
@@ -76,6 +76,13 @@ export class PianoSynth {
       const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
       if (AudioCtxClass) {
         this.ctx = new AudioCtxClass();
+      }
+      if (typeof navigator !== 'undefined' && navigator.audioSession) {
+        try {
+          navigator.audioSession.type = 'playback';
+        } catch {
+          // Safe ignore
+        }
       }
     }
 
@@ -171,10 +178,10 @@ export class PianoSynth {
    * @param {number|string} freqOrNote - Frequency in Hz or note string (e.g., 'C4', 'A#4').
    * @param {number} [duration=2.0] - Tone duration in seconds.
    * @param {number|null} [startTime=null] - Scheduled start audio time (defaults to currentTime).
-   * @param {number} [volume=0.8] - Note velocity volume (0.0 to 1.0).
+   * @param {number} [volume=1.0] - Note velocity volume (0.0 to 1.0).
    * @returns {Promise<void>}
    */
-  async playTone(freqOrNote, duration = 2.0, startTime = null, volume = 0.8) {
+  async playTone(freqOrNote, duration = 2.0, startTime = null, volume = 1.0) {
     await this.ensureAudioRunning();
     const ctx = this.getContext();
     if (!ctx) {
@@ -422,10 +429,10 @@ export class PianoSynth {
    * Preloads all samples first to guarantee synchronized audio start time without latency drift.
    * @param {Array<number|string>} notes - Array of note frequencies or note strings.
    * @param {number} [duration=2.0] - Duration in seconds.
-   * @param {number} [volume=0.8] - Volume level.
+   * @param {number} [volume=1.0] - Volume level.
    * @returns {Promise<void>}
    */
-  async playChord(notes, duration = 2.0, volume = 0.8) {
+  async playChord(notes, duration = 2.0, volume = 1.0) {
     if (Array.isArray(notes)) {
       await Promise.all(notes.map((note) => this.loadSample(note)));
     }
