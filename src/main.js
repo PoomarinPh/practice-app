@@ -18,6 +18,7 @@ import { SelectorView } from './views/selector-view.js';
 import { SummaryView } from './views/summary-view.js';
 import { VoiceConfigView } from './views/voice-config-view.js';
 import { VoiceGameController } from './views/voice-game-controller.js';
+import { VoiceSummaryView } from './views/voice-summary-view.js';
 
 /**
  * Formats elapsed milliseconds into MM:SS.S display.
@@ -489,24 +490,45 @@ export function initApp(mountTarget) {
         break;
 
       case 'summary':
-        activeController = new SummaryView(appContainer, {
-          sessionData: params.sessionData,
-          onPlayAgain: () => {
-            router.navigate('game', {
-              exerciseId: params.sessionData?.exerciseId || 'color-matching',
-              mode: params.sessionData?.mode || 'HSV',
-              questionCount: params.sessionData?.totalQuestions || 5,
-            });
-          },
-          onConfigure: () => {
-            router.navigate('config', {
-              exerciseId: params.sessionData?.exerciseId || 'color-matching',
-            });
-          },
-          onViewHistory: () => {
-            router.navigate('history');
-          },
-        });
+        if (params?.sessionData?.exerciseId === 'voice-training') {
+          activeController = new VoiceSummaryView(appContainer, {
+            sessionData: params.sessionData,
+            onPlayAgain: () => {
+              router.navigate('game', {
+                exerciseId: 'voice-training',
+                mode: 'interval-breakdown',
+                questionCount: params.sessionData?.totalQuestions || 5,
+              });
+            },
+            onConfigure: () => {
+              router.navigate('config', {
+                exerciseId: 'voice-training',
+              });
+            },
+            onHome: () => {
+              router.navigate('hub');
+            },
+          });
+        } else {
+          activeController = new SummaryView(appContainer, {
+            sessionData: params.sessionData,
+            onPlayAgain: () => {
+              router.navigate('game', {
+                exerciseId: params.sessionData?.exerciseId || 'color-matching',
+                mode: params.sessionData?.mode || 'HSV',
+                questionCount: params.sessionData?.totalQuestions || 5,
+              });
+            },
+            onConfigure: () => {
+              router.navigate('config', {
+                exerciseId: params.sessionData?.exerciseId || 'color-matching',
+              });
+            },
+            onViewHistory: () => {
+              router.navigate('history');
+            },
+          });
+        }
         break;
 
       case 'history':

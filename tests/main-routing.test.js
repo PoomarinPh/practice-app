@@ -116,6 +116,45 @@ describe('App View Routing Integration', () => {
     expect(appEl.querySelector('.config-view-container')).not.toBeNull();
     expect(appEl.querySelector('.config-title').textContent).toContain('Voice Training');
   });
+
+  it('navigates to Voice Summary and loops back to Hub on Back to Hub tap', () => {
+    const { router } = initApp(appEl);
+
+    // Directly navigate router to summary with voice-training payload
+    router.navigate('summary', {
+      sessionData: {
+        exerciseId: 'voice-training',
+        mode: 'interval-breakdown',
+        totalQuestions: 1,
+        correctCount: 1,
+        accuracyPercent: 100,
+        questions: [
+          {
+            questionNumber: 1,
+            interval: 'P5',
+            prompt: 'top',
+            targetNote: 'G4',
+            targetFreq: 392.0,
+            detectedPitch: 392.0,
+            detectedNote: 'G4',
+            cents: 0,
+            rating: 'flawless',
+            score: 100,
+            isCorrect: true,
+          },
+        ],
+      },
+    });
+
+    expect(appEl.querySelector('.voice-summary-view')).not.toBeNull();
+    expect(appEl.textContent).toContain('Vocal Session Summary');
+
+    const homeBtn = appEl.querySelector('#voice-summary-home-btn');
+    expect(homeBtn).not.toBeNull();
+    homeBtn.click();
+
+    expect(appEl.querySelector('.hub-view-container')).not.toBeNull();
+  });
 });
 
 
