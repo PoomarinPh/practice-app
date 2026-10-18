@@ -84,4 +84,38 @@ describe('App View Routing Integration', () => {
 
     expect(appEl.querySelector('.config-view-container')).not.toBeNull();
   });
+
+  it('navigates from Hub to Voice Config when tapping Voice Training card', () => {
+    initApp(appEl);
+
+    const voiceCard = appEl.querySelector('[data-exercise-id="voice-training"]');
+    expect(voiceCard).not.toBeNull();
+    voiceCard.click();
+
+    expect(appEl.querySelector('.config-view-container')).not.toBeNull();
+    expect(appEl.querySelector('.config-title').textContent).toContain('Voice Training');
+  });
+
+  it('navigates from Voice Config to Voice Game Drill and exits back to Voice Config', () => {
+    initApp(appEl);
+
+    // Hub -> Voice Config
+    appEl.querySelector('[data-exercise-id="voice-training"]').click();
+    expect(appEl.querySelector('.config-view-container')).not.toBeNull();
+
+    // Voice Config -> Voice Game
+    const startBtn = appEl.querySelector('#start-exercise-btn');
+    startBtn.click();
+
+    expect(appEl.querySelector('.voice-container')).not.toBeNull();
+    expect(appEl.querySelector('.voice-prompt-card')).not.toBeNull();
+    expect(appEl.querySelector('#voice-exit-btn')).not.toBeNull();
+
+    // Exit Voice Game -> returns to Voice Config
+    appEl.querySelector('#voice-exit-btn').click();
+    expect(appEl.querySelector('.config-view-container')).not.toBeNull();
+    expect(appEl.querySelector('.config-title').textContent).toContain('Voice Training');
+  });
 });
+
+

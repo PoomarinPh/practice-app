@@ -41,15 +41,35 @@ describe('Modular Exercise Architecture', () => {
   });
 
   describe('exerciseRegistry', () => {
-    it('contains ColorMatchingExercise as the initial active exercise', () => {
-      expect(exerciseRegistry.length).toBeGreaterThanOrEqual(1);
-      const active = getExerciseById('color-matching');
-      expect(active).toBeDefined();
-      expect(active?.id).toBe('color-matching');
+    it('contains ColorMatchingExercise and VoiceTrainingExercise in the active registry', () => {
+      expect(exerciseRegistry.length).toBeGreaterThanOrEqual(2);
+      const colorEx = getExerciseById('color-matching');
+      expect(colorEx).toBeDefined();
+      expect(colorEx?.id).toBe('color-matching');
+
+      const voiceEx = getExerciseById('voice-training');
+      expect(voiceEx).toBeDefined();
+      expect(voiceEx?.id).toBe('voice-training');
+      expect(voiceEx?.name).toContain('Voice Training');
     });
 
     it('returns undefined for non-existent exercise id gracefully', () => {
       expect(getExerciseById('non-existent')).toBeUndefined();
     });
   });
+
+  describe('VoiceTrainingExercise', () => {
+    it('exposes vocal metadata and interval schema', () => {
+      const voiceEx = getExerciseById('voice-training');
+      expect(voiceEx).toBeDefined();
+      const schema = voiceEx.getConfigSchema();
+      expect(schema.modes).toContain('interval-breakdown');
+      expect(schema.intervals).toContain('P5');
+      expect(schema.intervals).toContain('m2');
+      expect(schema.intervals.length).toBe(12);
+      expect(schema.range.min).toBe('C3');
+      expect(schema.range.max).toBe('C7');
+    });
+  });
 });
+

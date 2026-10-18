@@ -7,6 +7,7 @@
 
 import { ColorWheel } from '../components/color-wheel.js';
 import { getAccuracyStats } from '../utils/storage.js';
+import { getExerciseById } from '../exercises/exercise-registry.js';
 
 /**
  * @typedef {Object} ConfigViewOptions
@@ -26,8 +27,11 @@ export class ConfigView {
     this.onBack = options.onBack || null;
     this.onStart = options.onStart || null;
 
-    this.selectedCount = 5;
-    this.selectedMode = 'HSV';
+    const exercise = getExerciseById(this.exerciseId);
+    const schema = exercise?.getConfigSchema();
+
+    this.selectedCount = schema?.defaultCount || 5;
+    this.selectedMode = schema?.defaultMode || (this.exerciseId === 'voice-training' ? 'interval-breakdown' : 'HSV');
     this.previewWheel = null;
 
     this.render();
@@ -47,11 +51,17 @@ export class ConfigView {
   render() {
     this.container.innerHTML = '';
 
+    const exercise = getExerciseById(this.exerciseId);
+    const title = exercise?.name || 'Color Matching (HSV)';
+    const subtitle = exercise?.description || 'Recreate target swatches using the polar color wheel and vertical luminance bar.';
+
     const allTimeStats = getAccuracyStats(null, this.selectedMode);
     const past7DaysStats = getAccuracyStats(7, this.selectedMode);
 
     const root = document.createElement('div');
     root.className = 'config-view-container';
+
+    const isVoice = this.exerciseId === 'voice-training';
 
     root.innerHTML = `
       <header class="config-header">
@@ -62,14 +72,14 @@ export class ConfigView {
       </header>
 
       <div class="config-hero">
-        <h1 class="config-title">Color Matching (HSV)</h1>
-        <p class="config-subtitle">Recreate target swatches using the polar color wheel and vertical luminance bar.</p>
+        <h1 class="config-title">${title}</h1>
+        <p class="config-subtitle">${subtitle}</p>
       </div>
 
       <!-- Mode Performance & Average Speed Card -->
       <section class="mode-performance-card">
         <div class="perf-card-header">
-          <span class="perf-mode-badge">Active Mode: HSV</span>
+          <span class="perf-mode-badge">Active Mode: ${isVoice ? 'Interval Breakdown' : 'HSV'}</span>
           <span class="perf-status-badge">Tracked</span>
         </div>
 
@@ -120,20 +130,34 @@ export class ConfigView {
         </div>
       </section>
 
-      <!-- Color Mode Selector -->
+      <!-- Mode Selector -->
       <section class="config-section">
         <label class="config-section-label">Control Mode</label>
         <div class="mode-pills-row">
-          <button class="mode-pill active" type="button">HSV (Wheel + Value)</button>
-          <button class="mode-pill locked" type="button" disabled>RGB Sliders (Locked)</button>
+          ${isVoice ? `
+            <button class="mode-pill active" type="button">Interval Breakdown</button>
+            <button class="mode-pill locked" type="button" disabled>Chords Isolation (Locked)</button>
+          ` : `
+            <button class="mode-pill active" type="button">HSV (Wheel + Value)</button>
+            <button class="mode-pill locked" type="button" disabled>RGB Sliders (Locked)</button>
+          `}
         </div>
       </section>
 
-      <!-- Live Touch Sensitivity Preview -->
+      <!-- Live Touch Sensitivity / Audio Preview -->
       <section class="config-section">
-        <label class="config-section-label">Interactive Sensitivity Preview</label>
+        <label class="config-section-label">${isVoice ? 'Audio & Vocal Drill Preview' : 'Interactive Sensitivity Preview'}</label>
         <div class="config-preview-card">
-          <div id="config-wheel-mount"></div>
+          ${isVoice ? `
+            <div class="vocal-preview-placeholder" style="text-align: center; padding: 1.5rem 0.5rem;">
+              <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🎹 🎙️</div>
+              <p style="font-size: 0.85rem; color: var(--color-text-secondary); max-width: 320px; margin: 0 auto; line-height: 1.4;">
+                Two notes will play with acoustic piano sound. Sing the bottom or top note into your microphone to match the pitch!
+              </p>
+            </div>
+          ` : `
+            <div id="config-wheel-mount"></div>
+          `}
         </div>
       </section>
 
@@ -145,7 +169,7 @@ export class ConfigView {
 
     this.container.appendChild(root);
 
-    // Mount preview wheel
+    // Mount preview wheel if in color mode
     const previewMount = root.querySelector('#config-wheel-mount');
     if (previewMount) {
       this.previewWheel = new ColorWheel(previewMount, {

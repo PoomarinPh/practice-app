@@ -73,4 +73,20 @@ describe('SelectorView Component', () => {
 
     expect(onOpenHistory).toHaveBeenCalled();
   });
+
+  it('renders Voice Training card and fires onSelectExercise with voice-training', () => {
+    const onSelectExercise = vi.fn();
+    const view = new SelectorView(container, {
+      onSelectExercise,
+    });
+
+    const voiceCard = container.querySelector('[data-exercise-id="voice-training"]');
+    expect(voiceCard).not.toBeNull();
+    expect(voiceCard.textContent).toContain('Voice Training');
+    expect(voiceCard.classList.contains('active')).toBe(true);
+
+    voiceCard.click();
+    expect(onSelectExercise).toHaveBeenCalledWith('voice-training');
+  });
 });
+

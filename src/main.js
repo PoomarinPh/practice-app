@@ -16,6 +16,7 @@ import { HistoryView } from './views/history-view.js';
 import { ResultModal } from './views/result-modal.js';
 import { SelectorView } from './views/selector-view.js';
 import { SummaryView } from './views/summary-view.js';
+import { VoiceGameController } from './views/voice-game-controller.js';
 
 /**
  * Formats elapsed milliseconds into MM:SS.S display.
@@ -448,16 +449,29 @@ export function initApp(mountTarget) {
         break;
 
       case 'game':
-        activeController = new ActiveGameController(appContainer, params, {
-          onExit: () => {
-            if (!router.goBack()) {
-              router.navigate('config', params);
-            }
-          },
-          onFinish: (sessionData) => {
-            router.navigate('summary', { sessionData });
-          },
-        });
+        if (params?.exerciseId === 'voice-training') {
+          activeController = new VoiceGameController(appContainer, params, {
+            onExit: () => {
+              if (!router.goBack()) {
+                router.navigate('config', params);
+              }
+            },
+            onFinish: (sessionData) => {
+              router.navigate('summary', { sessionData });
+            },
+          });
+        } else {
+          activeController = new ActiveGameController(appContainer, params, {
+            onExit: () => {
+              if (!router.goBack()) {
+                router.navigate('config', params);
+              }
+            },
+            onFinish: (sessionData) => {
+              router.navigate('summary', { sessionData });
+            },
+          });
+        }
         break;
 
       case 'summary':

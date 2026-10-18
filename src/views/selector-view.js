@@ -5,6 +5,7 @@
  */
 
 import { getDataStore } from '../utils/storage.js';
+import { exerciseRegistry } from '../exercises/exercise-registry.js';
 
 /**
  * @typedef {Object} SelectorViewOptions
@@ -36,6 +37,19 @@ export class SelectorView {
     const root = document.createElement('div');
     root.className = 'hub-view-container';
 
+    // Build active cards from modular exerciseRegistry
+    const activeCardsHtml = exerciseRegistry.map((exercise) => `
+      <article class="exercise-card active" data-exercise-id="${exercise.id}" tabindex="0">
+        <div class="exercise-card-badge badge-active">${exercise.badge || 'Ready to Play'}</div>
+        <div class="exercise-card-icon">${exercise.icon || '🎯'}</div>
+        <h2 class="exercise-card-title">${exercise.name}</h2>
+        <p class="exercise-card-desc">${exercise.description}</p>
+        <div class="exercise-card-footer">
+          <span class="play-action-text">Configure & Play →</span>
+        </div>
+      </article>
+    `).join('');
+
     root.innerHTML = `
       <header class="hub-header">
         <div class="brand-badge">
@@ -49,27 +63,16 @@ export class SelectorView {
       </header>
 
       <div class="hub-hero">
-        <h1 class="exercise-hub-title">Color Perception Drills</h1>
+        <h1 class="exercise-hub-title">Sensory Perception Drills</h1>
         <p class="exercise-hub-subtitle">
-          Observe and recreate color targets to train your eye for Hue, Saturation, and Luminance.
+          Train your creative instincts through visual color observation and vocal pitch interval exercises.
         </p>
       </div>
 
       <div class="exercise-grid">
-        <!-- Active Exercise: Color Matching (HSV) -->
-        <article class="exercise-card active" data-exercise-id="color-matching" tabindex="0">
-          <div class="exercise-card-badge badge-active">Ready to Play</div>
-          <div class="exercise-card-icon">🎯</div>
-          <h2 class="exercise-card-title">Color Matching (HSV)</h2>
-          <p class="exercise-card-desc">
-            Observe randomized target colors and adjust Hue, Saturation, and Value to recreate them with high accuracy.
-          </p>
-          <div class="exercise-card-footer">
-            <span class="play-action-text">Configure & Play →</span>
-          </div>
-        </article>
+        ${activeCardsHtml}
 
-        <!-- Slot 2: Value & Luminance Isolation -->
+        <!-- Slot 3: Value & Luminance Isolation -->
         <article class="exercise-card locked" tabindex="-1">
           <div class="exercise-card-badge badge-locked">🔒 Coming Soon</div>
           <div class="exercise-card-icon">🌓</div>
@@ -82,7 +85,7 @@ export class SelectorView {
           </div>
         </article>
 
-        <!-- Slot 3: Complementary & Harmonic Mixing -->
+        <!-- Slot 4: Complementary & Harmonic Mixing -->
         <article class="exercise-card locked" tabindex="-1">
           <div class="exercise-card-badge badge-locked">🔒 Coming Soon</div>
           <div class="exercise-card-icon">🎨</div>
@@ -114,12 +117,23 @@ export class SelectorView {
       }
     });
 
-    const activeCard = root.querySelector('.exercise-card.active');
-    activeCard?.addEventListener('click', () => {
-      const exerciseId = activeCard.getAttribute('data-exercise-id');
-      if (typeof this.onSelectExercise === 'function') {
-        this.onSelectExercise(exerciseId);
-      }
+    const activeCards = root.querySelectorAll('.exercise-card.active');
+    activeCards.forEach((activeCard) => {
+      activeCard.addEventListener('click', () => {
+        const exerciseId = activeCard.getAttribute('data-exercise-id');
+        if (typeof this.onSelectExercise === 'function') {
+          this.onSelectExercise(exerciseId);
+        }
+      });
+      activeCard.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const exerciseId = activeCard.getAttribute('data-exercise-id');
+          if (typeof this.onSelectExercise === 'function') {
+            this.onSelectExercise(exerciseId);
+          }
+        }
+      });
     });
   }
 

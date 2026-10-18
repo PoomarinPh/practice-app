@@ -27,6 +27,26 @@ export class BaseExercise {
   /**
    * @type {string}
    */
+  icon = '🎯';
+
+  /**
+   * @type {string}
+   */
+  badge = 'Ready to Play';
+
+  /**
+   * @type {boolean}
+   */
+  isLocked = false;
+
+  /**
+   * @type {string}
+   */
+  category = 'visual';
+
+  /**
+   * @type {string}
+   */
   version = '1.0.0';
 
   /**

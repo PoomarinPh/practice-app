@@ -5,6 +5,7 @@
  */
 
 import { ColorMatchingExercise } from './color-matching.js';
+import { VoiceTrainingExercise } from './voice-training.js';
 
 /**
  * Active catalog of registered exercises.
@@ -12,6 +13,7 @@ import { ColorMatchingExercise } from './color-matching.js';
  */
 export const exerciseRegistry = [
   new ColorMatchingExercise(),
+  new VoiceTrainingExercise(),
 ];
 
 /**
@@ -22,3 +24,12 @@ export const exerciseRegistry = [
 export function getExerciseById(id) {
   return exerciseRegistry.find((exercise) => exercise.id === id);
 }
+
+/**
+ * Returns all registered exercises.
+ * @returns {import('./base-exercise.js').BaseExercise[]}
+ */
+export function getAllExercises() {
+  return [...exerciseRegistry];
+}
+
