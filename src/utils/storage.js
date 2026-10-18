@@ -131,6 +131,52 @@ export function recordGuess(guessRecord) {
     isCorrect,
   };
 
+  const existingIndex = guessRecord.id ? store.history.findIndex((h) => h.id === guessRecord.id) : -1;
+  if (existingIndex >= 0) {
+    const prevItem = store.history[existingIndex];
+    const s = store.stats;
+
+    // Adjust global counts if correctness flipped
+    if (prevItem.isCorrect !== isCorrect) {
+      if (isCorrect) {
+        s.totalCorrect += 1;
+        s.totalWrong = Math.max(0, s.totalWrong - 1);
+      } else {
+        s.totalWrong += 1;
+        s.totalCorrect = Math.max(0, s.totalCorrect - 1);
+      }
+    }
+
+    // Adjust global average accuracy
+    if (s.totalQuestions > 0) {
+      const prevTotalSum = s.averageAccuracy * s.totalQuestions;
+      const newTotalSum = prevTotalSum - (prevItem.score || 0) + score;
+      s.averageAccuracy = Math.round((newTotalSum / s.totalQuestions) * 10) / 10;
+    }
+
+    // Adjust mode stats
+    if (s.modeStats?.[mode] && s.modeStats[mode].totalQuestions > 0) {
+      const ms = s.modeStats[mode];
+      if (prevItem.isCorrect !== isCorrect) {
+        if (isCorrect) {
+          ms.totalCorrect += 1;
+          ms.totalWrong = Math.max(0, ms.totalWrong - 1);
+        } else {
+          ms.totalWrong += 1;
+          ms.totalCorrect = Math.max(0, ms.totalCorrect - 1);
+        }
+      }
+      const prevModeTotalSum = ms.averageAccuracy * ms.totalQuestions;
+      const newModeTotalSum = prevModeTotalSum - (prevItem.score || 0) + score;
+      ms.averageAccuracy = Math.round((newModeTotalSum / ms.totalQuestions) * 10) / 10;
+    }
+
+    // Replace item in history
+    store.history[existingIndex] = item;
+    saveDataStore(store);
+    return store;
+  }
+
   // 1. Update Global Lifetime Counters
   const s = store.stats;
   const prevTotal = s.totalQuestions;

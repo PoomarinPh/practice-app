@@ -122,6 +122,41 @@ describe('Storage Service & Analytics Engine', () => {
       const stats = getAccuracyStats(null, 'HSV');
       expect(stats.averageCorrectTime).toBe(8.0);
     });
+
+    it('updates an existing guess record in place when id matches without duplicating counters', () => {
+      const initialGuess = {
+        id: 'guess_test_1',
+        mode: 'interval-breakdown',
+        score: 50,
+        isCorrect: false,
+      };
+      recordGuess(initialGuess);
+
+      let store = getDataStore();
+      expect(store.stats.totalQuestions).toBe(1);
+      expect(store.stats.totalWrong).toBe(1);
+      expect(store.stats.totalCorrect).toBe(0);
+      expect(store.stats.averageAccuracy).toBe(50);
+      expect(store.history.length).toBe(1);
+
+      // Re-sing / retake with same ID
+      const updatedGuess = {
+        id: 'guess_test_1',
+        mode: 'interval-breakdown',
+        score: 90,
+        isCorrect: true,
+      };
+      recordGuess(updatedGuess);
+
+      store = getDataStore();
+      expect(store.stats.totalQuestions).toBe(1);
+      expect(store.stats.totalWrong).toBe(0);
+      expect(store.stats.totalCorrect).toBe(1);
+      expect(store.stats.averageAccuracy).toBe(90);
+      expect(store.history.length).toBe(1);
+      expect(store.history[0].score).toBe(90);
+      expect(store.history[0].isCorrect).toBe(true);
+    });
   });
 
   describe('Mode Isolation', () => {

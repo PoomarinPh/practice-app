@@ -78,6 +78,7 @@ export class VoiceGameController {
     this.topResult = null;
     this.activeRecordingTarget = null;
     this.isListening = false;
+    this.sessionRecordId = `voice_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     this.generateQuestion();
     this.render();
@@ -153,21 +154,34 @@ export class VoiceGameController {
   }
 
   /**
+   * Retrieves the active button for a target note (re-sing or primary sing).
+   * @param {'bottom'|'top'} target - Target note identifier.
+   * @returns {HTMLButtonElement|null} The button element if present.
+   */
+  getActionButton(target) {
+    return this.container.querySelector(`#voice-resing-${target}-btn`) ||
+           this.container.querySelector(`#voice-sing-${target}-btn`);
+  }
+
+  /**
    * Initiates vocal capture via microphone for a target note ('bottom' or 'top').
+   * If already listening (e.g. noise occurred), immediately cancels and restarts clean listening.
    * @param {'bottom'|'top'} target - Target note to record.
    */
   async startRecording(target = 'bottom') {
     if (this.isListening) {
-      return;
+      // Abort in-flight listening session immediately so user can restart a clean take without waiting
+      this.stopRecordingTimer();
+      this.isListening = false;
     }
 
     this.isListening = true;
     this.activeRecordingTarget = target;
 
-    const singBtn = this.container.querySelector(`#voice-sing-${target}-btn`);
-    if (singBtn) {
-      singBtn.textContent = 'Listening... 🔴 Sing now!';
-      singBtn.classList.add('pulse-recording');
+    const actionBtn = this.getActionButton(target);
+    if (actionBtn) {
+      actionBtn.textContent = 'Listening... 🔴 Sing now!';
+      actionBtn.classList.add('pulse-recording');
     }
 
     try {
@@ -180,8 +194,8 @@ export class VoiceGameController {
         const result = this.detector.sampleCurrentPitch();
         if (result.isVoiced && result.pitch && result.clarity > 0.35) {
           samples.push(result.pitch);
-          if (singBtn && !singBtn.textContent.includes('Voice detected')) {
-            singBtn.textContent = 'Listening... 🟢 Voice detected!';
+          if (actionBtn && !actionBtn.textContent.includes('Voice detected')) {
+            actionBtn.textContent = 'Listening... 🟢 Voice detected!';
           }
         }
       }, sampleIntervalMs);
@@ -193,9 +207,9 @@ export class VoiceGameController {
     } catch {
       this.isListening = false;
       this.stopRecordingTimer();
-      if (singBtn) {
-        singBtn.textContent = 'Microphone access denied';
-        singBtn.classList.remove('pulse-recording');
+      if (actionBtn) {
+        actionBtn.textContent = 'Microphone access denied';
+        actionBtn.classList.remove('pulse-recording');
       }
     }
   }
@@ -228,10 +242,20 @@ export class VoiceGameController {
 
     const validSamples = (samples || []).filter((f) => typeof f === 'number' && f > 0);
     if (validSamples.length === 0) {
-      const singBtn = this.container.querySelector(`#voice-sing-${activeTarget}-btn`);
-      if (singBtn) {
-        singBtn.textContent = 'Too quiet. Hum/sing a bit louder 🎤';
-        singBtn.classList.remove('pulse-recording');
+      const actionBtn = this.getActionButton(activeTarget);
+      if (actionBtn) {
+        actionBtn.textContent = 'Too quiet / Noise. Sing clearly 🎤';
+        actionBtn.classList.remove('pulse-recording');
+        window.setTimeout(() => {
+          if (!this.isListening) {
+            const currentBtn = this.getActionButton(activeTarget);
+            if (currentBtn) {
+              currentBtn.textContent = activeTarget === 'bottom'
+                ? (this.bottomResult ? '🔄 Re-sing Bottom Note 🎤' : 'Sing Bottom Note 🎤')
+                : (this.topResult ? '🔄 Re-sing Top Note 🎤' : 'Sing Top Note 🎤');
+            }
+          }
+        }, 2200);
       }
       return;
     }
@@ -300,9 +324,10 @@ export class VoiceGameController {
         this.questions.push(questionRecord);
       }
 
-      // Record to permanent analytics store
+      // Record to permanent analytics store with deterministic question ID to allow in-place re-sing updates
       recordGuess(
         {
+          id: `${this.sessionRecordId}_q${this.currentQuestion}`,
           exerciseId: 'voice-training',
           mode: 'interval-breakdown',
           interval: this.activeInterval,
@@ -534,10 +559,10 @@ export class VoiceGameController {
                   <button
                     id="voice-resing-bottom-btn"
                     type="button"
-                    class="btn btn-secondary btn-sm"
-                    style="font-size: 0.8rem; padding: 0.4rem 0.9rem; border-radius: 9999px;"
+                    class="submit-guess-btn voice-target-btn"
+                    style="width: 100%; max-width: 280px; margin: 0 auto; padding: 0.65rem 1.2rem; font-size: 0.95rem; font-weight: 700; border-radius: 9999px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.5); color: #38bdf8; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
                   >
-                    🔄 Re-sing Bottom Note
+                    <span>🔄</span> Re-sing Bottom Note 🎤
                   </button>
                 </div>
               </div>
@@ -595,10 +620,10 @@ export class VoiceGameController {
                   <button
                     id="voice-resing-top-btn"
                     type="button"
-                    class="btn btn-secondary btn-sm"
-                    style="font-size: 0.8rem; padding: 0.4rem 0.9rem; border-radius: 9999px;"
+                    class="submit-guess-btn voice-target-btn"
+                    style="width: 100%; max-width: 280px; margin: 0 auto; padding: 0.65rem 1.2rem; font-size: 0.95rem; font-weight: 700; border-radius: 9999px; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.5); color: #c4b5fd; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;"
                   >
-                    🔄 Re-sing Top Note
+                    <span>🔄</span> Re-sing Top Note 🎤
                   </button>
                 </div>
               </div>

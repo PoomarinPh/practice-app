@@ -40,6 +40,7 @@ describe('VoiceGameController Active Drill', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     if (container && container.parentNode) {
       container.parentNode.removeChild(container);
     }
@@ -265,5 +266,120 @@ describe('VoiceGameController Active Drill', () => {
     exitBtn.click();
 
     expect(onExit).toHaveBeenCalled();
+  });
+
+  it('allows re-singing a note at any time and updates pitch evaluation and outcome', async () => {
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    // Initial attempt: Bottom in tune (+5c), Top out of tune (+75c)
+    await controller.processPitchSamples([controller.bottomFreq * Math.pow(2, 5 / 1200)], 'bottom');
+    await controller.processPitchSamples([controller.topFreq * Math.pow(2, 75 / 1200)], 'top');
+
+    // Both answered, but missed
+    expect(container.textContent).toContain('Question Missed');
+    expect(controller.questions[0].isCorrect).toBe(false);
+
+    const storeInitial = getDataStore();
+    expect(storeInitial.history.length).toBe(1);
+    expect(storeInitial.history[0].isCorrect).toBe(false);
+
+    // Re-sing buttons must be rendered on both cards
+    const resingBottomBtn = container.querySelector('#voice-resing-bottom-btn');
+    const resingTopBtn = container.querySelector('#voice-resing-top-btn');
+    expect(resingBottomBtn).not.toBeNull();
+    expect(resingTopBtn).not.toBeNull();
+
+    // Re-sing Top Note in tune (0 cents error)
+    await controller.processPitchSamples([controller.topFreq], 'top');
+
+    // Outcome banner updates to Passed!
+    expect(container.textContent).toContain('Question Passed');
+    expect(controller.questions[0].isCorrect).toBe(true);
+
+    // History is updated in place, remaining exactly 1 item and marking isCorrect true
+    const storeAfter = getDataStore();
+    expect(storeAfter.history.length).toBe(1);
+    expect(storeAfter.history[0].isCorrect).toBe(true);
+  });
+
+  it('shows live listening and voice detected states on re-sing button when re-singing', async () => {
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    // First answer bottom note
+    await controller.processPitchSamples([controller.bottomFreq], 'bottom');
+    const resingBtn = container.querySelector('#voice-resing-bottom-btn');
+    expect(resingBtn).not.toBeNull();
+
+    // Trigger startRecording on bottom note again (re-sing)
+    const recordingPromise = controller.startRecording('bottom');
+
+    expect(resingBtn.textContent).toContain('Listening... 🔴 Sing now!');
+    expect(resingBtn.classList.contains('pulse-recording')).toBe(true);
+
+    // Wait 60ms for one detector sample interval (40ms tick) with voiced pitch
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(resingBtn.textContent).toContain('Listening... 🟢 Voice detected!');
+
+    controller.stopRecordingTimer();
+    await recordingPromise;
+  });
+
+  it('re-singing immediately restarts clean listen if triggered during an active recording', async () => {
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    await controller.startRecording('bottom');
+    expect(controller.isListening).toBe(true);
+
+    // User triggers re-sing while still listening (e.g. noise occurred)
+    await controller.startRecording('bottom');
+    expect(mockDetector.stop).toHaveBeenCalled();
+    expect(controller.isListening).toBe(true);
+    controller.stopRecordingTimer();
+  });
+
+  it('handles silent or noisy samples during re-sing with informative button feedback', async () => {
+    const controller = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        questionCount: 1,
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+
+    // First answer bottom note
+    await controller.processPitchSamples([controller.bottomFreq], 'bottom');
+    const resingBtn = container.querySelector('#voice-resing-bottom-btn');
+    expect(resingBtn).not.toBeNull();
+
+    // Re-sing with 0 valid samples (noise / silence)
+    await controller.processPitchSamples([], 'bottom');
+
+    expect(resingBtn.textContent).toContain('Too quiet / Noise');
   });
 });
