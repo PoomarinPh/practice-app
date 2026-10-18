@@ -11,23 +11,30 @@ import { hexToRgb, hsvToHex, hsvToRgb, relativeLuminance } from '../utils/color.
  * @typedef {Object} SwatchViewerOptions
  * @property {Object} [target] - Initial target color { h, s, v, hex }.
  * @property {Object} [guess] - Initial guess color { h, s, v, hex }.
- * @property {'split'|'side-by-side'} [viewMode='split'] - Initial display mode.
+ * @property {'split'|'side-by-side'|'separated'} [viewMode='split'] - Initial display mode.
  * @property {boolean} [isGrayscale=false] - Whether grayscale tonal aid is enabled.
+ * @property {HTMLElement|null} [targetContainer=null] - Dedicated mount element for target swatch.
+ * @property {HTMLElement|null} [guessContainer=null] - Dedicated mount element for guess swatch.
  */
 
 export class SwatchViewer {
   /**
-   * @param {HTMLElement} container - Parent element to attach swatches.
+   * @param {HTMLElement|null} container - Parent element to attach swatches, or null if using separate containers.
    * @param {SwatchViewerOptions} [options={}] - Configuration options.
    */
   constructor(container, options = {}) {
     this.container = container;
+    this.targetContainer = options.targetContainer || null;
+    this.guessContainer = options.guessContainer || null;
+
     this.target = options.target || { h: 0, s: 1, v: 1, hex: '#ff0000' };
     this.guess = options.guess || { h: 0, s: 1, v: 1, hex: '#ff0000' };
-    this.viewMode = options.viewMode || 'split';
+    this.viewMode = options.viewMode || (this.targetContainer && this.guessContainer ? 'separated' : 'split');
     this.isGrayscale = Boolean(options.isGrayscale);
 
     this.wrapperEl = null;
+    this.targetWrapperEl = null;
+    this.guessWrapperEl = null;
     this.targetEl = null;
     this.guessEl = null;
 
@@ -38,22 +45,47 @@ export class SwatchViewer {
    * Initializes and renders the DOM elements.
    */
   render() {
-    this.container.innerHTML = '';
+    if (this.targetContainer && this.guessContainer) {
+      // Screen-separated mode: Reference on top, Guess on bottom
+      this.targetContainer.innerHTML = '';
+      this.guessContainer.innerHTML = '';
 
-    this.wrapperEl = document.createElement('div');
-    this.wrapperEl.className = `swatch-viewer mode-${this.viewMode}${this.isGrayscale ? ' tonal-grayscale' : ''}`;
+      this.targetWrapperEl = document.createElement('div');
+      this.targetWrapperEl.className = `swatch-viewer mode-separated swatch-single-target${this.isGrayscale ? ' tonal-grayscale' : ''}`;
 
-    this.targetEl = document.createElement('div');
-    this.targetEl.className = 'swatch-card swatch-target';
-    this.targetEl.innerHTML = '<span class="swatch-label">Reference</span>';
+      this.targetEl = document.createElement('div');
+      this.targetEl.className = 'swatch-card swatch-target';
+      this.targetEl.innerHTML = '<span class="swatch-label">Reference</span>';
+      this.targetWrapperEl.appendChild(this.targetEl);
+      this.targetContainer.appendChild(this.targetWrapperEl);
 
-    this.guessEl = document.createElement('div');
-    this.guessEl.className = 'swatch-card swatch-guess';
-    this.guessEl.innerHTML = '<span class="swatch-label">Your Match</span>';
+      this.guessWrapperEl = document.createElement('div');
+      this.guessWrapperEl.className = `swatch-viewer mode-separated swatch-single-guess${this.isGrayscale ? ' tonal-grayscale' : ''}`;
 
-    this.wrapperEl.appendChild(this.targetEl);
-    this.wrapperEl.appendChild(this.guessEl);
-    this.container.appendChild(this.wrapperEl);
+      this.guessEl = document.createElement('div');
+      this.guessEl.className = 'swatch-card swatch-guess';
+      this.guessEl.innerHTML = '<span class="swatch-label">Your Match</span>';
+      this.guessWrapperEl.appendChild(this.guessEl);
+      this.guessContainer.appendChild(this.guessWrapperEl);
+    } else if (this.container) {
+      // Single container mode: Both swatches together
+      this.container.innerHTML = '';
+
+      this.wrapperEl = document.createElement('div');
+      this.wrapperEl.className = `swatch-viewer mode-${this.viewMode}${this.isGrayscale ? ' tonal-grayscale' : ''}`;
+
+      this.targetEl = document.createElement('div');
+      this.targetEl.className = 'swatch-card swatch-target';
+      this.targetEl.innerHTML = '<span class="swatch-label">Reference</span>';
+
+      this.guessEl = document.createElement('div');
+      this.guessEl.className = 'swatch-card swatch-guess';
+      this.guessEl.innerHTML = '<span class="swatch-label">Your Match</span>';
+
+      this.wrapperEl.appendChild(this.targetEl);
+      this.wrapperEl.appendChild(this.guessEl);
+      this.container.appendChild(this.wrapperEl);
+    }
 
     this.applyColors();
   }
@@ -138,11 +170,12 @@ export class SwatchViewer {
    */
   setGrayscale(active) {
     this.isGrayscale = Boolean(active);
-    if (this.wrapperEl) {
+    const wrappers = [this.wrapperEl, this.targetWrapperEl, this.guessWrapperEl].filter(Boolean);
+    for (const wrapper of wrappers) {
       if (this.isGrayscale) {
-        this.wrapperEl.classList.add('tonal-grayscale');
+        wrapper.classList.add('tonal-grayscale');
       } else {
-        this.wrapperEl.classList.remove('tonal-grayscale');
+        wrapper.classList.remove('tonal-grayscale');
       }
     }
     this.applyColors();

@@ -111,20 +111,21 @@ class ActiveGameController {
           </div>
         </section>
 
-        <!-- Swatch Viewer Card -->
-        <section class="swatch-viewer-card">
+        <!-- Reference Target Color Card (Top of Screen) -->
+        <section class="swatch-viewer-card reference-card">
           <div class="swatch-controls-bar">
-            <button id="view-mode-toggle" class="swatch-tool-btn" type="button">
-              <span>⇅</span> <span id="view-mode-text">Separated</span>
-            </button>
-            <button id="grayscale-toggle" class="swatch-tool-btn" type="button">
+            <div class="swatch-header-title">
+              <span class="swatch-tag-badge">Target</span>
+              <span class="swatch-heading-text">Reference Color</span>
+            </div>
+            <button id="grayscale-toggle" class="swatch-tool-btn" type="button" title="Toggle relative luminance grayscale comparison">
               <span>👁</span> <span id="grayscale-text">Tonal Check</span>
             </button>
           </div>
-          <div id="swatch-mount"></div>
+          <div id="target-swatch-mount"></div>
         </section>
 
-        <!-- Color Wheel & Vertical Value Slider Card -->
+        <!-- Color Wheel & Vertical Value Slider Card (Center) -->
         <section class="controls-card">
           <div id="wheel-mount"></div>
 
@@ -148,6 +149,18 @@ class ActiveGameController {
           </div>
         </section>
 
+        <!-- Guess Color Card (Bottom of Screen) -->
+        <section class="swatch-viewer-card guess-card">
+          <div class="swatch-controls-bar">
+            <div class="swatch-header-title">
+              <span class="swatch-tag-badge match-badge">Guess</span>
+              <span class="swatch-heading-text">Your Match</span>
+            </div>
+            <div class="swatch-live-hint">Adjust wheel & slider to match</div>
+          </div>
+          <div id="guess-swatch-mount"></div>
+        </section>
+
         <!-- Primary Submit Guess CTA -->
         <div class="submit-btn-row">
           <button id="submit-guess-btn" class="submit-guess-btn" type="button">
@@ -161,12 +174,14 @@ class ActiveGameController {
 
     this.timerEl = this.container.querySelector('#elapsed-timer');
 
-    // Mount SwatchViewer Component
-    const swatchMount = this.container.querySelector('#swatch-mount');
-    this.swatchViewer = new SwatchViewer(swatchMount, {
+    // Mount SwatchViewer Component with screen-separated mounts
+    const targetMount = this.container.querySelector('#target-swatch-mount');
+    const guessMount = this.container.querySelector('#guess-swatch-mount');
+    this.swatchViewer = new SwatchViewer(null, {
+      targetContainer: targetMount,
+      guessContainer: guessMount,
       target: this.targetColor,
       guess: this.guessColor,
-      viewMode: this.viewMode,
       isGrayscale: this.isGrayscale,
     });
 

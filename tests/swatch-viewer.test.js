@@ -94,4 +94,45 @@ describe('SwatchViewer Component', () => {
     expect(state.guess.h).toBe(60);
     expect(state.guess.hex).toBe('#ffff00');
   });
+
+  it('renders separated Reference and Guess swatches in distinct DOM containers (top and bottom of screen)', () => {
+    const topContainer = document.createElement('div');
+    const bottomContainer = document.createElement('div');
+    document.body.appendChild(topContainer);
+    document.body.appendChild(bottomContainer);
+
+    const viewer = new SwatchViewer(null, {
+      targetContainer: topContainer,
+      guessContainer: bottomContainer,
+      target: { h: 200, s: 0.8, v: 0.9, hex: '#2eb8e6' },
+      guess: { h: 100, s: 0.5, v: 0.7, hex: '#77b359' },
+    });
+
+    // Top container holds Reference swatch
+    const topTargetEl = topContainer.querySelector('.swatch-target');
+    const topGuessEl = topContainer.querySelector('.swatch-guess');
+    expect(topTargetEl).not.toBeNull();
+    expect(topGuessEl).toBeNull();
+    expect(topTargetEl.textContent).toContain('Reference');
+
+    // Bottom container holds Guess swatch
+    const bottomTargetEl = bottomContainer.querySelector('.swatch-target');
+    const bottomGuessEl = bottomContainer.querySelector('.swatch-guess');
+    expect(bottomTargetEl).toBeNull();
+    expect(bottomGuessEl).not.toBeNull();
+    expect(bottomGuessEl.textContent).toContain('Your Match');
+
+    // Update bottom guess without altering top target
+    viewer.update({
+      guess: { h: 300, s: 0.9, v: 0.8, hex: '#cc14cc' },
+    });
+    expect(viewer.getState().guess.hex).toBe('#cc14cc');
+    expect(viewer.getState().target.hex).toBe('#2eb8e6');
+
+    // Tonal grayscale affects both distinct containers
+    viewer.setGrayscale(true);
+    expect(topContainer.querySelector('.tonal-grayscale')).not.toBeNull();
+    expect(bottomContainer.querySelector('.tonal-grayscale')).not.toBeNull();
+  });
 });
+

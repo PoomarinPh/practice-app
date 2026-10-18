@@ -56,4 +56,30 @@ describe('Gameplay Flow & Round Summary Integration', () => {
     expect(appEl.querySelector('.interactive-container')).not.toBeNull();
     expect(appEl.querySelector('#stat-progress').textContent).toContain('Q 1 / 2');
   });
+
+  it('mounts Reference color at the top and Guess color at the bottom of the screen', () => {
+    const { router } = initApp(appEl);
+    router.navigate('game', { exerciseId: 'color-matching', mode: 'HSV', questionCount: 3 });
+
+    const targetMount = appEl.querySelector('#target-swatch-mount');
+    const guessMount = appEl.querySelector('#guess-swatch-mount');
+    const controlsCard = appEl.querySelector('.controls-card');
+
+    expect(targetMount).not.toBeNull();
+    expect(guessMount).not.toBeNull();
+    expect(controlsCard).not.toBeNull();
+
+    // Verify DOM order: targetMount is before controlsCard, and controlsCard is before guessMount
+    expect(Boolean(targetMount.compareDocumentPosition(controlsCard) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(controlsCard.compareDocumentPosition(guessMount) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+
+    // Target mount contains reference card
+    expect(targetMount.querySelector('.swatch-target')).not.toBeNull();
+    expect(targetMount.querySelector('.swatch-label').textContent).toBe('Reference');
+
+    // Guess mount contains your match card
+    expect(guessMount.querySelector('.swatch-guess')).not.toBeNull();
+    expect(guessMount.querySelector('.swatch-label').textContent).toBe('Your Match');
+  });
 });
+

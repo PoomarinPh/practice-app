@@ -284,19 +284,22 @@ stateDiagram-v2
 * **Action CTA:** Prominent **"Start Exercise"** button.
 
 ### 5.3 Screen 3: Active Exercise (`game-view.js`)
-* **Mobile-First Layout Optimized for iPhone:**
+* **Mobile-First Ergonomic Layout Optimized for iPhone:**
   * Top navigation bar with question index indicator (`Question 2 / 5`), current round score, and a quick "Quit" button with confirmation.
-* **Top Half: Swatch Comparison Area:**
-  * Dual-swatch display: **Target Color** vs **Your Guess Color**.
-  * **Split-View / Contact Seam:** Swatches meet along a sharp center boundary (essential for artists to detect value and hue micro-contrast).
-  * **View Mode Toggle:** Switch between *Split Contact View* and *Side-by-Side View*.
-  * **Value Check (Tonal Aid) Toggle:** An optional button that temporarily desaturates both swatches to grayscale using accurate luminance weights, allowing the user to inspect whether their lightness/value matches before guessing hue.
-* **Bottom Half: Color Adjustment UI:**
+* **Top of Screen: Reference Color Area:**
+  * Dedicated **Reference Target Swatch** card located beneath the stats banner.
+  * Displays the target color to observe, analyze, and memorize.
+  * **Value Check (Tonal Aid) Toggle:** An optional button in the reference header that temporarily desaturates both reference and match swatches to ITU-R BT.709 grayscale, allowing the user to inspect whether their lightness/value matches before dialing in hue and saturation.
+* **Center of Screen: Color Adjustment UI:**
   * High-DPI Canvas Color Wheel with touch-point reticle.
   * Vertical Value Slider with circular thumb.
   * Touch optimization: `touch-action: none` to completely eliminate iPhone bounce-scroll and swipe-navigation conflicts.
   * Fine-tuning stepper buttons (subtle `+` / `-` for $1^\circ$ Hue, $1\%$ Saturation, $1\%$ Value) for fingertip precision on compact phone screens.
-* **Submission:** Primary "Submit Guess" button.
+* **Bottom of Screen: User Guess Color Area:**
+  * Dedicated **Your Match Swatch** card positioned beneath the color adjustment wheel and directly above the submission button.
+  * Displays the live mixed color dialed in by the user in real time.
+  * **Physical Screen Separation Rationale:** Keeping the reference swatch at the top and the guess swatch at the bottom forces the user to internalize and memorize color relationships, eliminating the edge-contrast shortcut where adjacent swatches make differences artificially trivial to spot.
+* **Submission:** Primary "Submit Guess 🎯" CTA button at the very bottom of the view.
 
 ### 5.4 Screen 3.5: Result Feedback Modal / Sheet (`result-modal.js`)
 * Pops up smoothly over the screen immediately after submitting.
