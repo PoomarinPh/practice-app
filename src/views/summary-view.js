@@ -147,12 +147,12 @@ export class SummaryView {
                   <div class="recap-swatches-row" style="background: rgba(15, 23, 42, 0.6); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
                     <div class="recap-swatch-box" style="flex: 1;">
                       <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${q.targetNote || '--'}</div>
-                      <span class="recap-swatch-label">Target (${Math.round(q.targetFreq || 0)} Hz)</span>
+                      <span class="recap-swatch-label">Target Note</span>
                     </div>
                     <div class="recap-vs" style="font-weight: 700; color: #64748b;">VS</div>
                     <div class="recap-swatch-box" style="flex: 1;">
                       <div style="font-size: 1.25rem; font-weight: 800; color: ${q.isCorrect ? '#34d399' : '#f87171'};">${q.detectedNote || '--'}</div>
-                      <span class="recap-swatch-label">Your Pitch (${Math.round(q.detectedPitch || 0)} Hz)</span>
+                      <span class="recap-swatch-label">Your Pitch</span>
                     </div>
                   </div>
                 </article>

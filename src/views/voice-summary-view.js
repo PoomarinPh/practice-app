@@ -218,24 +218,22 @@ export class VoiceSummaryView {
 
                   <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0, 0, 0, 0.25); padding: 0.6rem 0.85rem; border-radius: 0.5rem;">
                     <div>
-                      <span style="font-size: 0.7rem; color: #94a3b8; display: block;">Target Pitch</span>
-                      <span style="font-size: 1.15rem; font-weight: 800; color: #38bdf8;">${q.targetNote}</span>
-                      <span style="font-size: 0.75rem; color: #64748b;">(${Math.round(q.targetFreq || 0)} Hz)</span>
+                      <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 0.15rem;">Target Pitch</span>
+                      <span style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${q.targetNote}</span>
                     </div>
 
                     <button
                       type="button"
                       class="btn btn-secondary btn-sm"
                       data-replay-note="${q.targetNote}"
-                      style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.3rem;"
+                      style="font-size: 0.75rem; padding: 0.35rem 0.7rem; border-radius: 0.4rem; display: flex; align-items: center; gap: 0.3rem;"
                     >
                       <span>🎵</span> Play Note
                     </button>
 
                     <div style="text-align: right;">
-                      <span style="font-size: 0.7rem; color: #94a3b8; display: block;">Your Pitch</span>
-                      <span style="font-size: 1.15rem; font-weight: 800; color: ${q.isCorrect ? '#34d399' : '#f87171'};">${q.detectedNote || '--'}</span>
-                      <span style="font-size: 0.75rem; color: #64748b;">(${Math.round(q.detectedPitch || 0)} Hz)</span>
+                      <span style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 0.15rem;">Your Pitch</span>
+                      <span style="font-size: 1.25rem; font-weight: 800; color: ${q.isCorrect ? '#34d399' : '#f87171'};">${q.detectedNote || '--'}</span>
                     </div>
                   </div>
                 </article>

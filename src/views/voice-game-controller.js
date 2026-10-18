@@ -471,16 +471,14 @@ export class VoiceGameController {
             </div>
 
             <!-- Target vs Sung Comparison Row -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; text-align: center; background: rgba(0, 0, 0, 0.3); padding: 0.75rem; border-radius: 0.6rem; margin-bottom: 1.25rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; text-align: center; background: rgba(0, 0, 0, 0.3); padding: 0.85rem; border-radius: 0.6rem; margin-bottom: 1.25rem;">
               <div>
-                <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Target Note</span>
-                <span style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${this.targetNote}</span>
-                <span style="font-size: 0.75rem; color: #64748b; display: block;">${Math.round(this.targetFreq)} Hz</span>
+                <span style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Target Note</span>
+                <span style="font-size: 1.4rem; font-weight: 800; color: #38bdf8;">${this.targetNote}</span>
               </div>
               <div>
-                <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Your Sung Pitch</span>
-                <span style="font-size: 1.25rem; font-weight: 800; color: ${this.lastResult.evaluation.isCorrect ? '#34d399' : '#f87171'};">${this.lastResult.detectedNote}</span>
-                <span style="font-size: 0.75rem; color: #64748b; display: block;">${Math.round(this.lastResult.detectedPitch)} Hz</span>
+                <span style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.2rem;">Your Sung Pitch</span>
+                <span style="font-size: 1.4rem; font-weight: 800; color: ${this.lastResult.evaluation.isCorrect ? '#34d399' : '#f87171'};">${this.lastResult.detectedNote}</span>
               </div>
             </div>
 

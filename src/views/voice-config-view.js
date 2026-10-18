@@ -10,7 +10,6 @@ import {
   INTERVAL_NAMES,
   noteToMidi,
   midiToNote,
-  noteToFreq,
 } from '../utils/audio/notes.js';
 import { getIntervalAccuracyStats } from '../utils/storage.js';
 
@@ -176,10 +175,10 @@ export class VoiceConfigView {
             <span>🎵</span> Vocal Range (C3 - C7)
           </h2>
           <div id="range-display-banner" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 0.75rem; padding: 0.75rem; text-align: center; margin-bottom: 1rem;">
-            <div style="font-size: 1.25rem; font-weight: 700; color: #38bdf8;">
-              <span id="label-range-from">${this.rangeFrom}</span> (${Math.round(noteToFreq(this.rangeFrom))} Hz)
-              <span style="color: #64748b; margin: 0 0.5rem;">→</span>
-              <span id="label-range-to">${this.rangeTo}</span> (${Math.round(noteToFreq(this.rangeTo))} Hz)
+            <div style="font-size: 1.4rem; font-weight: 800; color: #38bdf8;">
+              <span id="label-range-from">${this.rangeFrom}</span>
+              <span style="color: #64748b; margin: 0 0.75rem;">→</span>
+              <span id="label-range-to">${this.rangeTo}</span>
             </div>
             <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 0.25rem;">
               Notes will be selected randomly inside this span
