@@ -90,7 +90,7 @@ export class SummaryView {
 
       <div class="summary-hero">
         <h1 class="summary-title">Round Summary</h1>
-        <p class="summary-subtitle">Review your color matching performance and per-question channel accuracy.</p>
+        <p class="summary-subtitle">${this.sessionData.exerciseId === 'voice-training' ? 'Review your vocal pitch accuracy and interval breakdown performance.' : 'Review your color matching performance and per-question channel accuracy.'}</p>
       </div>
 
       <!-- Session KPI Summary Grid -->
@@ -117,16 +117,51 @@ export class SummaryView {
       <section class="round-recap-section">
         <div class="round-recap-header">
           <h2 class="round-recap-title">Questions Review (${totalAnswered})</h2>
-          <span class="round-recap-sub">Detailed target vs guess channel comparison</span>
+          <span class="round-recap-sub">${this.sessionData.exerciseId === 'voice-training' ? 'Detailed target vs sung pitch cent comparison' : 'Detailed target vs guess channel comparison'}</span>
         </div>
 
         <div class="recap-list">
           ${questions
             .map((q) => {
+              const isVoice = this.sessionData.exerciseId === 'voice-training';
+              const statusClass = q.isCorrect ? 'status-correct' : 'status-wrong';
+
+              if (isVoice) {
+                const ratingText = q.rating === 'flawless'
+                  ? '🌟 Flawless Pitch'
+                  : q.rating === 'in-tune'
+                    ? '🎯 In Tune'
+                    : '❌ Off-Pitch';
+                const centsText = `${q.cents !== undefined && q.cents >= 0 ? '+' : ''}${q.cents ?? 0}c`;
+
+                return `
+                <article class="recap-card">
+                  <div class="recap-card-header">
+                    <div class="recap-q-badge">Question ${q.questionNumber}: ${q.interval || 'Interval'} (${(q.prompt || 'Target').toUpperCase()})</div>
+                    <div class="recap-header-right">
+                      <span class="recap-status-pill ${statusClass}">${ratingText}</span>
+                      <span class="recap-score-badge">${centsText}</span>
+                    </div>
+                  </div>
+
+                  <div class="recap-swatches-row" style="background: rgba(15, 23, 42, 0.6); padding: 0.75rem; border-radius: 0.5rem; text-align: center;">
+                    <div class="recap-swatch-box" style="flex: 1;">
+                      <div style="font-size: 1.25rem; font-weight: 800; color: #38bdf8;">${q.targetNote || '--'}</div>
+                      <span class="recap-swatch-label">Target (${Math.round(q.targetFreq || 0)} Hz)</span>
+                    </div>
+                    <div class="recap-vs" style="font-weight: 700; color: #64748b;">VS</div>
+                    <div class="recap-swatch-box" style="flex: 1;">
+                      <div style="font-size: 1.25rem; font-weight: 800; color: ${q.isCorrect ? '#34d399' : '#f87171'};">${q.detectedNote || '--'}</div>
+                      <span class="recap-swatch-label">Your Pitch (${Math.round(q.detectedPitch || 0)} Hz)</span>
+                    </div>
+                  </div>
+                </article>
+              `;
+              }
+
               const targetHex = q.target?.hex || '#000000';
               const guessHex = q.guess?.hex || '#000000';
               const timeString = q.isCorrect && typeof q.timeSeconds === 'number' ? `⏱ ${q.timeSeconds}s` : '';
-              const statusClass = q.isCorrect ? 'status-correct' : 'status-wrong';
               const statusText = q.isCorrect ? 'Correct (≥85%)' : 'Needs Adjustment';
               const valAcc = q.breakdown?.value ?? 0;
               const hueAcc = q.breakdown?.hue ?? 0;

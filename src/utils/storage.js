@@ -326,3 +326,34 @@ export function recordSession(sessionSummary = {}) {
   return store;
 }
 
+/**
+ * Computes rolling 30-day accuracy for a specific musical interval in voice training.
+ * @param {string} intervalCode - Short interval code (e.g. 'P5', 'm3').
+ * @param {number} [windowDays=30] - Rolling window in days.
+ * @returns {{ totalAttempts: number, totalCorrect: number, accuracyPercent: number|null }}
+ */
+export function getIntervalAccuracyStats(intervalCode, windowDays = 30) {
+  const store = getDataStore();
+  const cutoff = Date.now() - windowDays * 86400000;
+
+  const relevant = (store.history || []).filter((entry) => {
+    if (entry.exerciseId !== 'voice-training') {
+      return false;
+    }
+    const itemInterval = entry.interval || entry.target?.interval;
+    if (itemInterval !== intervalCode) {
+      return false;
+    }
+    const time = new Date(entry.timestamp).getTime();
+    return !isNaN(time) && time >= cutoff;
+  });
+
+  const totalAttempts = relevant.length;
+  if (totalAttempts === 0) {
+    return { totalAttempts: 0, totalCorrect: 0, accuracyPercent: null };
+  }
+
+  const totalCorrect = relevant.filter((entry) => entry.isCorrect).length;
+  const accuracyPercent = Math.round((totalCorrect / totalAttempts) * 1000) / 10;
+  return { totalAttempts, totalCorrect, accuracyPercent };
+}

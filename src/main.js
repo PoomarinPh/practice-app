@@ -16,6 +16,7 @@ import { HistoryView } from './views/history-view.js';
 import { ResultModal } from './views/result-modal.js';
 import { SelectorView } from './views/selector-view.js';
 import { SummaryView } from './views/summary-view.js';
+import { VoiceConfigView } from './views/voice-config-view.js';
 import { VoiceGameController } from './views/voice-game-controller.js';
 
 /**
@@ -435,17 +436,30 @@ export function initApp(mountTarget) {
 
     switch (route) {
       case 'config':
-        activeController = new ConfigView(appContainer, {
-          exerciseId: params.exerciseId || 'color-matching',
-          onBack: () => {
-            if (!router.goBack()) {
-              router.navigate('hub');
-            }
-          },
-          onStart: (cfg) => {
-            router.navigate('game', cfg);
-          },
-        });
+        if (params?.exerciseId === 'voice-training') {
+          activeController = new VoiceConfigView(appContainer, {
+            onBack: () => {
+              if (!router.goBack()) {
+                router.navigate('hub');
+              }
+            },
+            onStart: (cfg) => {
+              router.navigate('game', cfg);
+            },
+          });
+        } else {
+          activeController = new ConfigView(appContainer, {
+            exerciseId: params?.exerciseId || 'color-matching',
+            onBack: () => {
+              if (!router.goBack()) {
+                router.navigate('hub');
+              }
+            },
+            onStart: (cfg) => {
+              router.navigate('game', cfg);
+            },
+          });
+        }
         break;
 
       case 'game':

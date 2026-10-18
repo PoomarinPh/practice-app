@@ -187,6 +187,44 @@ export class PianoSynth {
   }
 
   /**
+   * Plays a sequence of notes one after another (melodic sequence).
+   * @param {Array<number|string>} notes - Array of note frequencies or note strings.
+   * @param {number} [noteDuration=0.9] - Duration per note in seconds.
+   * @param {number} [gapDuration=0.15] - Silence between notes in seconds.
+   * @param {number} [volume=0.8] - Volume level.
+   * @returns {Promise<void>}
+   */
+  async playSequential(notes, noteDuration = 0.9, gapDuration = 0.15, volume = 0.8) {
+    await this.ensureAudioRunning();
+    const ctx = this.getContext();
+    const now = ctx ? ctx.currentTime : 0;
+    const promises = [];
+    let currentStart = now;
+
+    for (const note of notes) {
+      promises.push(this.playTone(note, noteDuration, currentStart, volume));
+      currentStart += noteDuration + gapDuration;
+    }
+
+    await Promise.all(promises);
+  }
+
+  /**
+   * Plays a group of notes simultaneously as a chord (harmonic).
+   * @param {Array<number|string>} notes - Array of note frequencies or note strings.
+   * @param {number} [duration=2.0] - Duration in seconds.
+   * @param {number} [volume=0.8] - Volume level.
+   * @returns {Promise<void>}
+   */
+  async playChord(notes, duration = 2.0, volume = 0.8) {
+    await this.ensureAudioRunning();
+    const ctx = this.getContext();
+    const now = ctx ? ctx.currentTime : 0;
+    const promises = (notes || []).map((note) => this.playTone(note, duration, now, volume));
+    await Promise.all(promises);
+  }
+
+  /**
    * Plays a two-note interval either sequentially (melodic) or simultaneously (harmonic).
    * @param {number|string} note1 - First note frequency or note name.
    * @param {number|string} note2 - Second note frequency or note name.
@@ -203,23 +241,10 @@ export class PianoSynth {
     const gapDuration = options.gapDuration !== undefined ? options.gapDuration : 0.15;
     const volume = options.volume !== undefined ? options.volume : 0.8;
 
-    await this.ensureAudioRunning();
-    const ctx = this.getContext();
-    const now = ctx ? ctx.currentTime : 0;
-
     if (style === 'harmonic') {
-      // Simultaneous playback
-      await Promise.all([
-        this.playTone(note1, noteDuration, now, volume),
-        this.playTone(note2, noteDuration, now, volume),
-      ]);
+      await this.playChord([note1, note2], noteDuration, volume);
     } else {
-      // Melodic sequential playback (Note 1, then Note 2)
-      const note2Start = now + noteDuration + gapDuration;
-      await Promise.all([
-        this.playTone(note1, noteDuration, now, volume),
-        this.playTone(note2, noteDuration, note2Start, volume),
-      ]);
+      await this.playSequential([note1, note2], noteDuration, gapDuration, volume);
     }
   }
 

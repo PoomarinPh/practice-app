@@ -141,4 +141,60 @@ describe('SummaryView Component', () => {
 
     expect(onViewHistory).toHaveBeenCalled();
   });
+
+  it('renders voice training session review cards with interval names and cent deviations', () => {
+    const voiceSessionData = {
+      exerciseId: 'voice-training',
+      mode: 'interval-breakdown',
+      totalQuestions: 2,
+      questions: [
+        {
+          questionNumber: 1,
+          interval: 'P5',
+          prompt: 'top',
+          targetNote: 'G4',
+          targetFreq: 392.0,
+          detectedPitch: 394.0,
+          detectedNote: 'G4',
+          cents: 8.8,
+          rating: 'flawless',
+          score: 91,
+          isCorrect: true,
+        },
+        {
+          questionNumber: 2,
+          interval: 'm3',
+          prompt: 'bottom',
+          targetNote: 'C4',
+          targetFreq: 261.63,
+          detectedPitch: 250.0,
+          detectedNote: 'B3',
+          cents: -79.0,
+          rating: 'out-of-tune',
+          score: 21,
+          isCorrect: false,
+        },
+      ],
+    };
+
+    new SummaryView(container, {
+      sessionData: voiceSessionData,
+      onPlayAgain: vi.fn(),
+      onConfigure: vi.fn(),
+      onViewHistory: vi.fn(),
+    });
+
+    const recapCards = container.querySelectorAll('.recap-card');
+    expect(recapCards.length).toBe(2);
+
+    expect(recapCards[0].textContent).toContain('P5 (TOP)');
+    expect(recapCards[0].textContent).toContain('Flawless Pitch');
+    expect(recapCards[0].textContent).toContain('+8.8c');
+    expect(recapCards[0].textContent).toContain('G4');
+
+    expect(recapCards[1].textContent).toContain('m3 (BOTTOM)');
+    expect(recapCards[1].textContent).toContain('Off-Pitch');
+    expect(recapCards[1].textContent).toContain('-79c');
+  });
 });
+
