@@ -80,7 +80,9 @@ export class VoiceConfigView {
     this.rangeTo = saved?.rangeTo || DEFAULT_VOICE_CONFIG.rangeTo;
     this.questionCount = saved?.questionCount || DEFAULT_VOICE_CONFIG.questionCount;
     this.playbackStyle = 'harmonic';
-    this.soundType = saved?.soundType || DEFAULT_VOICE_CONFIG.soundType || 'piano';
+    this.soundType = ['piano', 'cello', 'violin', 'sine'].includes(saved?.soundType)
+      ? saved.soundType
+      : (DEFAULT_VOICE_CONFIG.soundType || 'piano');
     this.enabledIntervals = Array.isArray(saved?.enabledIntervals) && saved.enabledIntervals.length > 0
       ? [...saved.enabledIntervals]
       : [...DEFAULT_VOICE_CONFIG.enabledIntervals];
@@ -257,22 +259,38 @@ export class VoiceConfigView {
           <h2 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 0.75rem; color: #e2e8f0; display: flex; align-items: center; gap: 0.5rem;">
             <span>🔊</span> Sound Timbre
           </h2>
-          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.6rem;">
             <button
               type="button"
               class="chip-button ${this.soundType === 'piano' ? 'active' : ''}"
               data-sound-type="piano"
-              style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
+              style="padding: 0.65rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
             >
               🎹 Acoustic Piano
             </button>
             <button
               type="button"
+              class="chip-button ${this.soundType === 'cello' ? 'active' : ''}"
+              data-sound-type="cello"
+              style="padding: 0.65rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
+            >
+              🎻 Acoustic Cello
+            </button>
+            <button
+              type="button"
+              class="chip-button ${this.soundType === 'violin' ? 'active' : ''}"
+              data-sound-type="violin"
+              style="padding: 0.65rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
+            >
+              🎻 Acoustic Violin
+            </button>
+            <button
+              type="button"
               class="chip-button ${this.soundType === 'sine' ? 'active' : ''}"
               data-sound-type="sine"
-              style="flex: 1; min-width: 140px; padding: 0.75rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
+              style="padding: 0.65rem 0.5rem; font-weight: 700; border-radius: 0.5rem; text-align: center;"
             >
-              〰️ Pure Sine Wave (10s Reference)
+              〰️ Pure Sine Wave (10s)
             </button>
           </div>
         </section>

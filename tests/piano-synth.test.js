@@ -204,4 +204,60 @@ describe('PianoSynth Procedural Piano Synthesizer', () => {
       expect(osc2.type).toBe('sine');
     });
   });
+
+  describe('Cello & Violin Acoustic Instruments', () => {
+    it('supports setting soundType to cello and violin', () => {
+      synth.setSoundType('cello');
+      expect(synth.getSoundType()).toBe('cello');
+
+      synth.setSoundType('violin');
+      expect(synth.getSoundType()).toBe('violin');
+
+      synth.setSoundType('invalid');
+      expect(synth.getSoundType()).toBe('piano');
+    });
+
+    it('fetches from /sounds/cello/ when soundType is cello', async () => {
+      synth.setSoundType('cello');
+      await synth.loadSample('C3');
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/sounds\/cello\/C3\.mp3$/)
+      );
+      expect(mockContext.decodeAudioData).toHaveBeenCalled();
+    });
+
+    it('fetches from /sounds/violin/ when soundType is violin', async () => {
+      synth.setSoundType('violin');
+      await synth.loadSample('A4');
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/sounds\/violin\/A4\.mp3$/)
+      );
+      expect(mockContext.decodeAudioData).toHaveBeenCalled();
+    });
+
+    it('isolates sample cache between different instruments', async () => {
+      synth.setSoundType('piano');
+      await synth.loadSample('C4');
+
+      synth.setSoundType('cello');
+      await synth.loadSample('C4');
+
+      synth.setSoundType('violin');
+      await synth.loadSample('C4');
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/sounds\/piano\/C4\.mp3$/)
+      );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/sounds\/cello\/C4\.mp3$/)
+      );
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/sounds\/violin\/C4\.mp3$/)
+      );
+      expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+    });
+  });
 });
+

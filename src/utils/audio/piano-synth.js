@@ -12,15 +12,24 @@ import { noteToFreq, noteToSampleFilename } from './notes.js';
 /**
  * Base directory containing acoustic grand piano MP3 samples.
  * Dynamically resolves Vite deployment base path (e.g. '/practice-app/sounds/piano/').
+/**
+ * Root directory containing instrument MP3 samples.
+ * Dynamically resolves Vite deployment base path (e.g. '/practice-app/sounds/').
  * @type {string}
  */
-const DEFAULT_SAMPLE_BASE_URL = (() => {
+const DEFAULT_SOUNDS_ROOT = (() => {
   const base =
     typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL
       ? import.meta.env.BASE_URL
       : '/';
-  return `${base.replace(/\/$/, '')}/sounds/piano/`;
+  return `${base.replace(/\/$/, '')}/sounds/`;
 })();
+
+/**
+ * Valid sound timbre types supported by the synthesizer.
+ * @type {readonly ('piano'|'cello'|'violin'|'sine')[]}
+ */
+export const SUPPORTED_SOUND_TYPES = Object.freeze(['piano', 'cello', 'violin', 'sine']);
 
 /**
  * Harmonic configuration representing piano string acoustic spectrum for procedural fallback.
@@ -39,16 +48,17 @@ export class PianoSynth {
    * @param {AudioContext} [options.audioContext] - Existing or mock audio context.
    * @param {number} [options.masterVolume=1.0] - Master volume multiplier.
    * @param {string} [options.sampleBaseUrl] - Custom base URL for MP3 samples.
+   * @param {'piano'|'cello'|'violin'|'sine'} [options.soundType='piano'] - Initial sound timbre.
    */
   constructor(options = {}) {
     this.ctx = options.audioContext || null;
     this.masterVolume = options.masterVolume !== undefined ? options.masterVolume : 1.0;
     this.masterGainNode = null;
-    this.sampleBaseUrl = options.sampleBaseUrl || DEFAULT_SAMPLE_BASE_URL;
-    this.soundType = options.soundType || 'piano';
+    this.customSampleBaseUrl = options.sampleBaseUrl || null;
+    this.soundType = SUPPORTED_SOUND_TYPES.includes(options.soundType) ? options.soundType : 'piano';
 
     /**
-     * In-memory cache of decoded AudioBuffers keyed by sample filename.
+     * In-memory cache of decoded AudioBuffers keyed by instrument and sample filename.
      * @type {Map<string, AudioBuffer>}
      */
     this.sampleCache = new Map();
@@ -69,19 +79,44 @@ export class PianoSynth {
   }
 
   /**
-   * Returns current sound generation type ('piano' or 'sine').
-   * @returns {'piano'|'sine'}
+   * Resolves the base URL for fetching samples of a given instrument timbre.
+   * @param {'piano'|'cello'|'violin'|'sine'} [soundType] - Instrument type.
+   * @returns {string} Directory URL ending with a slash.
+   */
+  getSampleBaseUrl(soundType = this.soundType) {
+    if (this.customSampleBaseUrl) {
+      return this.customSampleBaseUrl;
+    }
+    const type = ['piano', 'cello', 'violin'].includes(soundType) ? soundType : 'piano';
+    return `${DEFAULT_SOUNDS_ROOT}${type}/`;
+  }
+
+  /**
+   * Backwards-compatible getter for sample base URL of currently active timbre.
+   * @returns {string}
+   */
+  get sampleBaseUrl() {
+    return this.getSampleBaseUrl(this.soundType);
+  }
+
+  /**
+   * Returns current sound generation type ('piano', 'cello', 'violin', or 'sine').
+   * @returns {'piano'|'cello'|'violin'|'sine'}
    */
   getSoundType() {
     return this.soundType;
   }
 
   /**
-   * Sets sound generation type ('piano' or 'sine').
-   * @param {'piano'|'sine'} type
+   * Sets sound generation type ('piano', 'cello', 'violin', or 'sine').
+   * @param {'piano'|'cello'|'violin'|'sine'} type
    */
   setSoundType(type) {
-    this.soundType = type === 'sine' ? 'sine' : 'piano';
+    if (SUPPORTED_SOUND_TYPES.includes(type)) {
+      this.soundType = type;
+    } else {
+      this.soundType = 'piano';
+    }
   }
 
   /**
@@ -124,12 +159,14 @@ export class PianoSynth {
   }
 
   /**
-   * Fetches and decodes an acoustic piano MP3 sample into an AudioBuffer.
+   * Fetches and decodes an acoustic instrument MP3 sample into an AudioBuffer.
    * Returns cached buffer if already loaded, or deduplicates in-flight fetches.
    * @param {string|number} noteOrFilename - Scientific pitch name (e.g. 'C4', 'Eb5') or MIDI number.
+   * @param {'piano'|'cello'|'violin'} [soundType] - Instrument sound timbre.
    * @returns {Promise<AudioBuffer | null>} Decoded AudioBuffer or null on failure.
    */
-  async loadSample(noteOrFilename) {
+  async loadSample(noteOrFilename, soundType = this.soundType) {
+    const instType = ['piano', 'cello', 'violin'].includes(soundType) ? soundType : 'piano';
     let filename;
     try {
       if (typeof noteOrFilename === 'string' && noteOrFilename.endsWith('.mp3')) {
@@ -141,17 +178,20 @@ export class PianoSynth {
       return null;
     }
 
-    if (this.sampleCache.has(filename)) {
-      return this.sampleCache.get(filename);
+    const cacheKey = `${instType}:${filename}`;
+
+    if (this.sampleCache.has(cacheKey)) {
+      return this.sampleCache.get(cacheKey);
     }
 
-    if (this.loadingPromises.has(filename)) {
-      return this.loadingPromises.get(filename);
+    if (this.loadingPromises.has(cacheKey)) {
+      return this.loadingPromises.get(cacheKey);
     }
 
     const loadPromise = (async () => {
       try {
-        const url = `${this.sampleBaseUrl}${filename}`;
+        const baseUrl = this.getSampleBaseUrl(instType);
+        const url = `${baseUrl}${filename}`;
         const response = await fetch(url);
         if (!response.ok) {
           return null;
@@ -164,33 +204,34 @@ export class PianoSynth {
         }
 
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        this.sampleCache.set(filename, audioBuffer);
+        this.sampleCache.set(cacheKey, audioBuffer);
         return audioBuffer;
       } catch {
         return null;
       } finally {
-        this.loadingPromises.delete(filename);
+        this.loadingPromises.delete(cacheKey);
       }
     })();
 
-    this.loadingPromises.set(filename, loadPromise);
+    this.loadingPromises.set(cacheKey, loadPromise);
     return loadPromise;
   }
 
   /**
    * Preloads and decodes multiple note samples in parallel for zero-latency drill playback.
    * @param {Array<string|number>} notes - List of notes or MIDI numbers to preload.
+   * @param {'piano'|'cello'|'violin'} [soundType] - Instrument sound timbre.
    * @returns {Promise<void>}
    */
-  async preloadNotes(notes) {
+  async preloadNotes(notes, soundType = this.soundType) {
     if (!Array.isArray(notes) || notes.length === 0) {
       return;
     }
-    await Promise.allSettled(notes.map((note) => this.loadSample(note)));
+    await Promise.allSettled(notes.map((note) => this.loadSample(note, soundType)));
   }
 
   /**
-   * Plays a single acoustic grand piano tone. Prioritizes recorded MP3 sample playback,
+   * Plays a single acoustic tone (piano, cello, violin, or sine). Prioritizes recorded MP3 sample playback,
    * falling back to rich procedural synthesis if the sample is unavailable.
    * @param {number|string} freqOrNote - Frequency in Hz or note string (e.g., 'C4', 'A#4').
    * @param {number} [duration=2.0] - Tone duration in seconds.
@@ -218,7 +259,7 @@ export class PianoSynth {
       return this.playSineTone(freq, duration, start, volume);
     }
 
-    // Check if we can play a real recorded acoustic grand piano sample
+    // Check if we can play a real recorded acoustic sample (piano, cello, or violin)
     let sampleBuffer = null;
     let noteName = null;
 
@@ -228,12 +269,7 @@ export class PianoSynth {
 
     if (noteName) {
       try {
-        const filename = noteToSampleFilename(noteName);
-        if (this.sampleCache.has(filename)) {
-          sampleBuffer = this.sampleCache.get(filename);
-        } else {
-          sampleBuffer = await this.loadSample(noteName);
-        }
+        sampleBuffer = await this.loadSample(noteName, soundType);
       } catch {
         sampleBuffer = null;
       }

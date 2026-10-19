@@ -482,4 +482,41 @@ describe('VoiceGameController Active Drill', () => {
     expect(controller.isPlayingReference).toBeNull();
     controller.stopRecordingTimer();
   });
+
+  it('configures synth with cello and violin soundType and plays 1.8s acoustic reference notes', () => {
+    mockSynth.setSoundType = vi.fn();
+    mockSynth.playTone = vi.fn();
+
+    // 1. Cello
+    const celloController = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        soundType: 'cello',
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+    expect(mockSynth.setSoundType).toHaveBeenCalledWith('cello');
+
+    celloController.playTargetPitch('bottom');
+    expect(mockSynth.playTone).toHaveBeenCalledWith(celloController.bottomNote, 1.8);
+
+    // 2. Violin
+    mockSynth.setSoundType.mockClear();
+    mockSynth.playTone.mockClear();
+    const violinController = new VoiceGameController(
+      container,
+      {
+        enabledIntervals: ['P5'],
+        soundType: 'violin',
+      },
+      {},
+      { synth: mockSynth, detector: mockDetector }
+    );
+    expect(mockSynth.setSoundType).toHaveBeenCalledWith('violin');
+
+    violinController.playTargetPitch('top');
+    expect(mockSynth.playTone).toHaveBeenCalledWith(violinController.topNote, 1.8);
+  });
 });

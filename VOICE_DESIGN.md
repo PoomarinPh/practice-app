@@ -99,14 +99,20 @@ The exercise covers all 12 equal-temperament intervals from 1 to 12 semitones:
 +-------------------------------------------------------------------+
 ```
 
-### 3.1 Hybrid Acoustic Piano Synthesizer (`PianoSynth`)
-To achieve authentic concert grand piano sound quality while maintaining 100% offline PWA reliability, `PianoSynth` uses a hybrid architecture:
-1. **88-Key Acoustic Grand Piano MP3 Samples:**
-   - Real recorded acoustic grand piano samples for all 88 keys (`A0` through `C8`) located in `public/sounds/piano/`.
-   - Permissive open-source license (MusyngKite / CC-BY 3.0). Highly optimized MP3 format totaling ~1.8 MB (~20 KB per note).
-   - In-memory `AudioBuffer` caching with preloading (`preloadNotes()`) for zero-latency instant playback during drills.
-   - Cached automatically by Service Worker (`public/sw.js`) on first request for full offline availability.
-2. **Procedural Multi-Harmonic Fallback:**
+### 3.1 Hybrid Acoustic & Multi-Instrument Synthesizer (`PianoSynth`)
+To achieve authentic sound quality while maintaining 100% offline PWA reliability, `PianoSynth` uses a flexible multi-instrument hybrid architecture:
+1. **88-Key Acoustic Sample Banks:**
+   - Real recorded acoustic samples across all 88 keys (`A0` through `C8`) located in `public/sounds/{instrument}/`:
+     - **Grand Piano:** `public/sounds/piano/` (~1.8 MB total).
+     - **Acoustic Cello:** `public/sounds/cello/` (~2.1 MB total) — warm low-to-mid register ideal for lower voices (Tenor, Baritone, Bass).
+     - **Acoustic Violin:** `public/sounds/violin/` (~2.0 MB total) — resonant upper-mid register ideal for higher voices (Alto, Mezzo, Soprano).
+   - Permissive open-source soundfont license (MusyngKite / FluidR3_GM / CC-BY 3.0).
+   - In-memory `AudioBuffer` caching with instrument namespace isolation (`${instrument}:${filename}`) and parallel preloading (`preloadNotes()`).
+   - Automatically cached by Service Worker (`public/sw.js`) on request for offline availability.
+2. **Pure Mathematical Sine Wave Mode:**
+   - Single pure sine wave oscillator ($f$) with smooth click-free 20ms attack and exponential release envelope.
+   - Reference tone sustains for 10.0 seconds with interactive stop toggling.
+3. **Procedural Multi-Harmonic Fallback:**
    - If sample fetching fails or when running in headless unit test environments, automatically falls back to procedural additive synthesis:
      - Fundamental $f$ ($1.0$), Harmonic 2 ($2f$, $0.45$), Harmonic 3 ($3f$, $0.18$), Harmonic 4 ($4f$, $0.06$).
      - Hammer percussion transient: 15ms bandpass-filtered noise impulse.
@@ -183,9 +189,9 @@ stateDiagram-v2
 - **Question Count Chips:**
   - `[ 1 ]` `[ 5 ]` `[ 10 ]` `[ 15 ]` `[ 20 ]` (Default: `5`).
 - **Sound Timbre Selector:**
-  - `[ 🎹 Acoustic Piano ]` `[ 〰️ Pure Sine Wave (10s Reference) ]` (Default: `piano`).
+  - `[ 🎹 Acoustic Piano ]` `[ 🎻 Acoustic Cello ]` `[ 🎻 Acoustic Violin ]` `[ 〰️ Pure Sine Wave (10s) ]` (Default: `piano`).
   - Stored in `localStorage` under `voice_training_preferences`.
-  - Configures synthesizer between realistic acoustic multi-harmonic piano sound and pure single-harmonic sine wave.
+  - Configures synthesizer between realistic acoustic grand piano, warm bowed cello, expressive bowed violin, and pure single-harmonic sine wave.
 - **Harmonic Playback:**
   - Plays both interval notes simultaneously as a chord for ear training isolation (2.2 seconds).
 - **Primary CTA:** Prominent **"Start Voice Drill 🎙️"** button (automatically disabled if 0 intervals are selected).
@@ -195,16 +201,16 @@ stateDiagram-v2
 - **Target Question Card:**
   - Prompt heading: *"Sing Both Notes (Bottom & Top)"*.
   - Interval identification tag (e.g. `Interval: Perfect 5th (P5)`).
-  - Audio playback button: `🔁 Replay Chord` (plays harmonic chord for 2.2s in either piano or pure sine wave timbre).
+  - Audio playback button: `🔁 Replay Chord` (plays harmonic chord for 2.2s using the selected instrument timbre).
 - **Dual Note Target Cards (Center Interaction Area):**
   - **Bottom Note Card (Target 1):**
     - Target label & note name (e.g. `Bottom Note: C4`).
-    - Reference audio button: `🎵 Hear Reference` / `⏹️ Stop Reference`. When pure sine wave mode is active, the reference note plays continuously for **10.0 seconds** (or 1.8 seconds for acoustic piano). Clicking again immediately toggles off playback. Initiating recording immediately halts the reference playback to prevent bleed into the microphone.
+    - Reference audio button: `🎵 Hear Reference` / `⏹️ Stop Reference`. When pure sine wave mode is active, the reference note plays continuously for **10.0 seconds** (or 1.8 seconds for acoustic piano, cello, or violin). Clicking again immediately toggles off playback. Initiating recording immediately halts the reference playback to prevent bleed into the microphone.
     - Answering button: `Sing Bottom Note 🎤` (with live recording animation).
     - Post-sing tuner feedback: cent deviation meter, rating badge (`🌟 Flawless`, `🎯 In Tune`, `❌ Off-Pitch`), sung pitch vs target note, and `🔄 Re-sing Bottom Note`.
   - **Top Note Card (Target 2):**
     - Target label & note name (e.g. `Top Note: G4`).
-    - Reference audio button: `🎵 Hear Reference` / `⏹️ Stop Reference` (10.0s pure sine or 1.8s piano with toggle-off and recording-stop protection).
+    - Reference audio button: `🎵 Hear Reference` / `⏹️ Stop Reference` (10.0s pure sine or 1.8s acoustic instrument with toggle-off and recording-stop protection).
     - Answering button: `Sing Top Note 🎤` (with live recording animation).
     - Post-sing tuner feedback: cent deviation meter, rating badge, sung pitch vs target note, and `🔄 Re-sing Top Note`.
 - **Completion Gate & Strict Evaluation Rule:**

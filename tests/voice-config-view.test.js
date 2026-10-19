@@ -229,18 +229,38 @@ describe('VoiceConfigView Component', () => {
     expect(startBtn.disabled).toBe(false);
   });
 
-  it('allows toggling soundType between piano and sine wave, saving to preferences and updating config', () => {
+  it('allows toggling soundType between piano, cello, violin, and sine wave, saving to preferences and updating config', () => {
     const view = new VoiceConfigView(container);
     expect(view.getConfig().soundType).toBe('piano');
 
+    // Test Cello
+    const celloBtn = container.querySelector('[data-sound-type="cello"]');
+    expect(celloBtn).not.toBeNull();
+    celloBtn.click();
+    expect(view.getConfig().soundType).toBe('cello');
+    expect(celloBtn.classList.contains('active')).toBe(true);
+
+    let saved = JSON.parse(localStorage.getItem('voice_training_preferences'));
+    expect(saved.soundType).toBe('cello');
+
+    // Test Violin
+    const violinBtn = container.querySelector('[data-sound-type="violin"]');
+    expect(violinBtn).not.toBeNull();
+    violinBtn.click();
+    expect(view.getConfig().soundType).toBe('violin');
+    expect(violinBtn.classList.contains('active')).toBe(true);
+
+    saved = JSON.parse(localStorage.getItem('voice_training_preferences'));
+    expect(saved.soundType).toBe('violin');
+
+    // Test Sine Wave
     const sineBtn = container.querySelector('[data-sound-type="sine"]');
     expect(sineBtn).not.toBeNull();
     sineBtn.click();
-
     expect(view.getConfig().soundType).toBe('sine');
     expect(sineBtn.classList.contains('active')).toBe(true);
 
-    const saved = JSON.parse(localStorage.getItem('voice_training_preferences'));
+    saved = JSON.parse(localStorage.getItem('voice_training_preferences'));
     expect(saved.soundType).toBe('sine');
 
     // Switch back to piano
